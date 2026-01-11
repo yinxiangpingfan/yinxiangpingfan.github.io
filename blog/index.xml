@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Blogs on 印象简单的博客</title>
-    <link>https://yinxiangpingfan.github.io/blog/</link>
+    <link>http://localhost:1313/blog/</link>
     <description>Recent content in Blogs on 印象简单的博客 created by </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh</language>
-    <lastBuildDate>Sun, 11 Jan 2026 16:27:24 +0800</lastBuildDate><atom:link href="https://yinxiangpingfan.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 11 Jan 2026 16:27:24 +0800</lastBuildDate><atom:link href="http://localhost:1313/blog/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>博客标题</title>
-      <link>https://yinxiangpingfan.github.io/blog/first/</link>
+      <link>http://localhost:1313/blog/first/</link>
       <pubDate>Sun, 11 Jan 2026 16:27:24 +0800</pubDate>
       
-      <guid>https://yinxiangpingfan.github.io/blog/first/</guid>
+      <guid>http://localhost:1313/blog/first/</guid>
       <description>&lt;p&gt;这是摘要
 111
 222&lt;/p&gt;

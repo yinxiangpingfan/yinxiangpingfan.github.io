@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=62050&amp;path=livereload" data-no-instant defer></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent简介以及原生调用ai</title>
     <meta charset="utf-8">
     <meta name="description" content="Ladder@agent是什么，以及go通过http调用ai">
     <meta name="author" content="EasyImpr/印象简单">
-    <link rel="canonical" href="http://localhost:1313/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+    <link rel="canonical" href="http://localhost:62050/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
 
-    <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
+    <link rel="alternate" type="application/rss+xml" href="http://localhost:62050//index.xml" title="印象简单的博客">
 
     
 
 
-    <meta property="og:url" content="http://localhost:1313/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+    <meta property="og:url" content="http://localhost:62050/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
   <meta property="og:site_name" content="印象简单的博客">
   <meta property="og:title" content="Agent简介以及原生调用ai">
   <meta property="og:description" content="agent是什么，以及go通过http调用ai">
   <meta property="og:locale" content="zh">
   <meta property="og:type" content="article">
-    <meta property="article:section" content="life">
+    <meta property="article:section" content="agent">
     <meta property="article:published_time" content="2026-01-11T20:06:45+08:00">
     <meta property="article:modified_time" content="2026-01-11T20:06:45+08:00">
     <meta property="article:tag" content="Agent">
@@ -38,14 +38,14 @@
     {
       "@type": "ListItem",
       "position":  1 ,
-      "name": "Lives",
-      "item": "http://localhost:1313/life/"
+      "name": "Agents",
+      "item": "http://localhost:62050/agent/"
     }, 
     {
       "@type": "ListItem",
       "position":  2 ,
       "name": "Agent简介以及原生调用ai",
-      "item": "http://localhost:1313/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+      "item": "http://localhost:62050/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
     }
   ]
 }
@@ -60,7 +60,7 @@
   "keywords": [
     "agent", "golang"
   ],
-  "articleBody": "agent是什么，以及go通过http调用ai\n什么是AI Agent AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。\n原生方法调用大模型 这里讲一个调用deepseek大模型的方法，先看官方文档\n从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式\n非流式调用 现在写一个golang的调用示例，使用http包\nconst ( DeepseekURL = \"https://api.deepseek.com/chat/completions\" ) type Message struct { Role string `json:\"role\"` Content string `json:\"content\"` } type Request struct { Model string `json:\"model\"` Messages []*Message `json:\"messages\"` Stream bool `json:\"stream\"` } func ChatWithDeepseek(rb *Request) { //先json序列化 bs, err := sonic.Marshal(rb) if err != nil { fmt.Println(\"json序列化失败\", err) return } //构造http请求体 request, _ := http.NewRequest(http.MethodPost, DeepseekURL, bytes.NewReader(bs)) //添加请求头 request.Header.Add(\"Content-Type\", \"application/json\") request.Header.Add(\"Authorization\", \"Bearer sk-b7c3725bbb2a4db8aca2d735b6c22d1c\") //发送请求 client := http.Client{ Timeout: 10 * time.Second, //设置超时时间 } response, err := client.Do(request) if err != nil { fmt.Println(\"发送请求失败\", err) return } defer response.Body.Close() //读取响应体 if response.StatusCode != 200 { body, _ := io.ReadAll(response.Body) fmt.Println(\"请求失败\", string(body), response.StatusCode) return } body, _ := io.ReadAll(response.Body) fmt.Println(string(body)) } func main() { rb := \u0026Request{ Model: \"deepseek-chat\", Messages: []*Message{ {Role: \"system\", Content: \"你是一个AI助手，请回答用户的问题\"}, {Role: \"user\", Content: \"离新年还有几天？\"}, }, Stream: false, } ChatWithDeepseek(rb) } 查看回答\n\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。 \\n\\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。 \\n\\n需要我帮你计算其他日子的倒计时吗？ 😊\"}, 由此可见，大模型并不知道现在是几号。\n不是特别美观进行json的反序列化。\ntype Choices struct { Index int `json:\"index\"` Message *Message `json:\"message\"` } type ResponseBody struct { Choices []*Choices `json:\"choices\"` } //===================== //fmt.Println(string(body)) var respBody ResponseBody err = sonic.Unmarshal(body, \u0026respBody) if err != nil { fmt.Println(\"json反序列化失败\", err) return } fmt.Println(respBody.Choices[0].Message.Role, respBody.Choices[0].Message.Content) 流式调用 很简单，现在main函数把stream改为true\n然后打印流失输出\n//打印流失返回结果 buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } fmt.Print(string(buffer[:n])) } data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"迎接\"},\"logprobs\":null,\"finish_reason\":null}]} data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"新的一年\"},\"logprobs\":null,\"finish_reason\":null}]} 现在可以根据流式的输出格式进行反序列化\ntype Delta struct { Content string `json:\"content\"` } type StreamChoice struct { Index int `json:\"index\"` Delta *Delta `json:\"delta\"` Logprobs string `json:\"logprobs\"` FinishReason string `json:\"finish_reason\"` } type ResStreamBody struct { ID string `json:\"id\"` Object string `json:\"object\"` Created int64 `json:\"created\"` Model string `json:\"model\"` SystemFingerprint string `json:\"system_fingerprint\"` Choices []*StreamChoice `json:\"choices\"` } //============================================ buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } // fmt.Print(string(buffer[:n])) //根据data分割，删掉data: 然后进行反序列化 for _, segment := range bytes.Split(buffer[:n], []byte(\"data: \")) { //删除空白行和换行 segment = bytes.TrimSpace(segment) if len(segment) == 0 { continue } //反序列化 var respStreamBody ResStreamBody err = sonic.Unmarshal(segment, \u0026respStreamBody) if err != nil { if string(segment) == \"[DONE]\" { continue } fmt.Println(\"json反序列化失败\", err) return } fmt.Printf(\"%s\", respStreamBody.Choices[0].Delta.Content) } } 效果如下\n今天是 **2024 年 12 月 31 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。 - **农历新年（春节）**：2025 年 1 月 29 日（星期三） - **倒计时**：从今天（12 月 31 日）算起，还有 **29 天**。 如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 1 日）** 就是新年啦！🎉 希望这些信息对你有帮助！ 😊 ",
+  "articleBody": "agent是什么，以及go通过http调用ai\n什么是AI Agent AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。\n原生方法调用大模型 这里讲一个调用deepseek大模型的方法，先看官方文档\n从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式\n非流式调用 现在写一个golang的调用示例，使用http包\nconst ( DeepseekURL = \"https://api.deepseek.com/chat/completions\" ) type Message struct { Role string `json:\"role\"` Content string `json:\"content\"` } type Request struct { Model string `json:\"model\"` Messages []*Message `json:\"messages\"` Stream bool `json:\"stream\"` } func ChatWithDeepseek(rb *Request) { //先json序列化 bs, err := sonic.Marshal(rb) if err != nil { fmt.Println(\"json序列化失败\", err) return } //构造http请求体 request, _ := http.NewRequest(http.MethodPost, DeepseekURL, bytes.NewReader(bs)) //添加请求头 request.Header.Add(\"Content-Type\", \"application/json\") request.Header.Add(\"Authorization\", \"Bearer sk-xxxx\") //发送请求 client := http.Client{ Timeout: 10 * time.Second, //设置超时时间 } response, err := client.Do(request) if err != nil { fmt.Println(\"发送请求失败\", err) return } defer response.Body.Close() //读取响应体 if response.StatusCode != 200 { body, _ := io.ReadAll(response.Body) fmt.Println(\"请求失败\", string(body), response.StatusCode) return } body, _ := io.ReadAll(response.Body) fmt.Println(string(body)) } func main() { rb := \u0026Request{ Model: \"deepseek-chat\", Messages: []*Message{ {Role: \"system\", Content: \"你是一个AI助手，请回答用户的问题\"}, {Role: \"user\", Content: \"离新年还有几天？\"}, }, Stream: false, } ChatWithDeepseek(rb) } 查看回答\n\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。 \\n\\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。 \\n\\n需要我帮你计算其他日子的倒计时吗？ 😊\"}, 由此可见，大模型并不知道现在是几号。\n不是特别美观进行json的反序列化。\ntype Choices struct { Index int `json:\"index\"` Message *Message `json:\"message\"` } type ResponseBody struct { Choices []*Choices `json:\"choices\"` } //===================== //fmt.Println(string(body)) var respBody ResponseBody err = sonic.Unmarshal(body, \u0026respBody) if err != nil { fmt.Println(\"json反序列化失败\", err) return } fmt.Println(respBody.Choices[0].Message.Role, respBody.Choices[0].Message.Content) 流式调用 很简单，现在main函数把stream改为true\n然后打印流失输出\n//打印流失返回结果 buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } fmt.Print(string(buffer[:n])) } data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"迎接\"},\"logprobs\":null,\"finish_reason\":null}]} data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"新的一年\"},\"logprobs\":null,\"finish_reason\":null}]} 现在可以根据流式的输出格式进行反序列化\ntype Delta struct { Content string `json:\"content\"` } type StreamChoice struct { Index int `json:\"index\"` Delta *Delta `json:\"delta\"` Logprobs string `json:\"logprobs\"` FinishReason string `json:\"finish_reason\"` } type ResStreamBody struct { ID string `json:\"id\"` Object string `json:\"object\"` Created int64 `json:\"created\"` Model string `json:\"model\"` SystemFingerprint string `json:\"system_fingerprint\"` Choices []*StreamChoice `json:\"choices\"` } //============================================ buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } // fmt.Print(string(buffer[:n])) //根据data分割，删掉data: 然后进行反序列化 for _, segment := range bytes.Split(buffer[:n], []byte(\"data: \")) { //删除空白行和换行 segment = bytes.TrimSpace(segment) if len(segment) == 0 { continue } //反序列化 var respStreamBody ResStreamBody err = sonic.Unmarshal(segment, \u0026respStreamBody) if err != nil { if string(segment) == \"[DONE]\" { continue } fmt.Println(\"json反序列化失败\", err) return } fmt.Printf(\"%s\", respStreamBody.Choices[0].Delta.Content) } } 效果如下\n今天是 **2024 年 12 月 31 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。 - **农历新年（春节）**：2025 年 1 月 29 日（星期三） - **倒计时**：从今天（12 月 31 日）算起，还有 **29 天**。 如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 1 日）** 就是新年啦！🎉 希望这些信息对你有帮助！ 😊 ",
   "wordCount" : "408",
   "inLanguage": "zh",
   "datePublished": "2026-01-11T20:06:45+08:00",
@@ -71,14 +71,14 @@
   },
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "http://localhost:1313/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+    "@id": "http://localhost:62050/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
   },
   "publisher": {
     "@type": "Organization",
     "name": "印象简单的博客",
     "logo": {
       "@type": "ImageObject",
-      "url": "http://localhost:1313/favicon.ico"
+      "url": "http://localhost:62050/favicon.ico"
     }
   }
 }
@@ -200,7 +200,7 @@
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">NewRequest</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">MethodPost</span>, <span style="color:#a6e22e">DeepseekURL</span>, <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">bs</span>))
 </span></span><span style="display:flex;"><span>	<span style="color:#75715e">//添加请求头</span>
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;Content-Type&#34;</span>, <span style="color:#e6db74">&#34;application/json&#34;</span>)
-</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;Authorization&#34;</span>, <span style="color:#e6db74">&#34;Bearer sk-b7c3725bbb2a4db8aca2d735b6c22d1c&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;Authorization&#34;</span>, <span style="color:#e6db74">&#34;Bearer sk-xxxx&#34;</span>)
 </span></span><span style="display:flex;"><span>	<span style="color:#75715e">//发送请求</span>
 </span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Client</span>{
 </span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Timeout</span>: <span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>, <span style="color:#75715e">//设置超时时间</span>
@@ -352,7 +352,7 @@
 </article>
 
         </div><footer class="footer">
-  <p>&copy; 2026 <a href="http://localhost:1313/">印象简单的博客</a>
+  <p>&copy; 2026 <a href="http://localhost:62050/">印象简单的博客</a>
     Powered by
     <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
     <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
