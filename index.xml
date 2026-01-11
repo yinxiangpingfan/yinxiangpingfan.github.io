@@ -14,7 +14,8 @@
       
       <guid>http://localhost:1313/blog/first/</guid>
       <description>&lt;p&gt;这是摘要
-111&lt;/p&gt;
+111
+222&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
 &lt;p&gt;这是内容&lt;/p&gt;</description>
     </item>
