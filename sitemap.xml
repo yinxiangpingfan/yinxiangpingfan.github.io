@@ -2,17 +2,36 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/blog/</loc>
+    <loc>https://yinxiangpingfan.github.io/tags/agent/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/tags/golang/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/life/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/series/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/tags/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/series/%E5%BC%80%E5%8F%91/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/</loc>
+    <lastmod>2026-01-11T20:06:45+08:00</lastmod>
+  </url><url>
+    <loc>https://yinxiangpingfan.github.io/blog/</loc>
     <lastmod>2026-01-11T16:27:24+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/blog/first/</loc>
+    <loc>https://yinxiangpingfan.github.io/blog/first/</loc>
     <lastmod>2026-01-11T16:27:24+08:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/</loc>
-    <lastmod>2026-01-11T16:27:24+08:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/categories/</loc>
-  </url><url>
-    <loc>http://localhost:1313/tags/</loc>
+    <loc>https://yinxiangpingfan.github.io/categories/</loc>
   </url>
 </urlset>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent简介以及原生调用ai</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@agent是什么，以及go通过http调用ai">
+    <meta name="author" content="EasyImpr/印象简单">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="Agent简介以及原生调用ai">
+  <meta property="og:description" content="agent是什么，以及go通过http调用ai">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="life">
+    <meta property="article:published_time" content="2026-01-11T20:06:45+08:00">
+    <meta property="article:modified_time" content="2026-01-11T20:06:45+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Agent简介以及原生调用ai">
+  <meta name="twitter:description" content="agent是什么，以及go通过http调用ai">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Lives",
+      "item": "https://yinxiangpingfan.github.io/life/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Agent简介以及原生调用ai",
+      "item": "https://yinxiangpingfan.github.io/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Agent简介以及原生调用ai",
+  "name": "Agent简介以及原生调用ai",
+  "description": "agent是什么，以及go通过http调用ai\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "agent是什么，以及go通过http调用ai\n什么是AI Agent AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。\n原生方法调用大模型 这里讲一个调用deepseek大模型的方法，先看官方文档\n从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式\n非流式调用 现在写一个golang的调用示例，使用http包\nconst ( DeepseekURL = \"https://api.deepseek.com/chat/completions\" ) type Message struct { Role string `json:\"role\"` Content string `json:\"content\"` } type Request struct { Model string `json:\"model\"` Messages []*Message `json:\"messages\"` Stream bool `json:\"stream\"` } func ChatWithDeepseek(rb *Request) { //先json序列化 bs, err := sonic.Marshal(rb) if err != nil { fmt.Println(\"json序列化失败\", err) return } //构造http请求体 request, _ := http.NewRequest(http.MethodPost, DeepseekURL, bytes.NewReader(bs)) //添加请求头 request.Header.Add(\"Content-Type\", \"application/json\") request.Header.Add(\"Authorization\", \"Bearer sk-b7c3725bbb2a4db8aca2d735b6c22d1c\") //发送请求 client := http.Client{ Timeout: 10 * time.Second, //设置超时时间 } response, err := client.Do(request) if err != nil { fmt.Println(\"发送请求失败\", err) return } defer response.Body.Close() //读取响应体 if response.StatusCode != 200 { body, _ := io.ReadAll(response.Body) fmt.Println(\"请求失败\", string(body), response.StatusCode) return } body, _ := io.ReadAll(response.Body) fmt.Println(string(body)) } func main() { rb := \u0026Request{ Model: \"deepseek-chat\", Messages: []*Message{ {Role: \"system\", Content: \"你是一个AI助手，请回答用户的问题\"}, {Role: \"user\", Content: \"离新年还有几天？\"}, }, Stream: false, } ChatWithDeepseek(rb) } 查看回答\n\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。 \\n\\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。 \\n\\n需要我帮你计算其他日子的倒计时吗？ 😊\"}, 由此可见，大模型并不知道现在是几号。\n不是特别美观进行json的反序列化。\ntype Choices struct { Index int `json:\"index\"` Message *Message `json:\"message\"` } type ResponseBody struct { Choices []*Choices `json:\"choices\"` } //===================== //fmt.Println(string(body)) var respBody ResponseBody err = sonic.Unmarshal(body, \u0026respBody) if err != nil { fmt.Println(\"json反序列化失败\", err) return } fmt.Println(respBody.Choices[0].Message.Role, respBody.Choices[0].Message.Content) 流式调用 很简单，现在main函数把stream改为true\n然后打印流失输出\n//打印流失返回结果 buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } fmt.Print(string(buffer[:n])) } data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"迎接\"},\"logprobs\":null,\"finish_reason\":null}]} data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"新的一年\"},\"logprobs\":null,\"finish_reason\":null}]} 现在可以根据流式的输出格式进行反序列化\ntype Delta struct { Content string `json:\"content\"` } type StreamChoice struct { Index int `json:\"index\"` Delta *Delta `json:\"delta\"` Logprobs string `json:\"logprobs\"` FinishReason string `json:\"finish_reason\"` } type ResStreamBody struct { ID string `json:\"id\"` Object string `json:\"object\"` Created int64 `json:\"created\"` Model string `json:\"model\"` SystemFingerprint string `json:\"system_fingerprint\"` Choices []*StreamChoice `json:\"choices\"` } //============================================ buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } // fmt.Print(string(buffer[:n])) //根据data分割，删掉data: 然后进行反序列化 for _, segment := range bytes.Split(buffer[:n], []byte(\"data: \")) { //删除空白行和换行 segment = bytes.TrimSpace(segment) if len(segment) == 0 { continue } //反序列化 var respStreamBody ResStreamBody err = sonic.Unmarshal(segment, \u0026respStreamBody) if err != nil { if string(segment) == \"[DONE]\" { continue } fmt.Println(\"json反序列化失败\", err) return } fmt.Printf(\"%s\", respStreamBody.Choices[0].Delta.Content) } } 效果如下\n今天是 **2024 年 12 月 31 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。 - **农历新年（春节）**：2025 年 1 月 29 日（星期三） - **倒计时**：从今天（12 月 31 日）算起，还有 **29 天**。 如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 1 日）** 就是新年啦！🎉 希望这些信息对你有帮助！ 😊 ",
+  "wordCount" : "408",
+  "inLanguage": "zh",
+  "datePublished": "2026-01-11T20:06:45+08:00",
+  "dateModified": "2026-01-11T20:06:45+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "EasyImpr/印象简单"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/life/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    </head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>Agent简介以及原生调用ai</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年1月11日&nbsp;· 408 字&nbsp;· 2 分钟</small>
+
+  
+<p>
+
+  <div class="blog-toc">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#非流式调用">非流式调用</a></li>
+    <li><a href="#流式调用">流式调用</a></li>
+  </ul>
+</nav>
+  </div>
+
+  <section class="blog-content"><p>agent是什么，以及go通过http调用ai</p>
+<h1 id="什么是ai-agent">什么是AI Agent</h1>
+<p>AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。</p>
+<h1 id="原生方法调用大模型">原生方法调用大模型</h1>
+<p>这里讲一个调用deepseek大模型的方法，先看官方文档</p>
+<p><img src="./agent01/image.png" alt=""></p>
+<p>从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式</p>
+<h2 id="非流式调用">非流式调用</h2>
+<p>现在写一个golang的调用示例，使用http包</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">DeepseekURL</span> = <span style="color:#e6db74">&#34;https://api.deepseek.com/chat/completions&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Message</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Role</span>    <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;role&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Content</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;content&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Request</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Model</span>    <span style="color:#66d9ef">string</span>     <span style="color:#e6db74">`json:&#34;model&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Messages</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span> <span style="color:#e6db74">`json:&#34;messages&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Stream</span>   <span style="color:#66d9ef">bool</span>       <span style="color:#e6db74">`json:&#34;stream&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ChatWithDeepseek</span>(<span style="color:#a6e22e">rb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Request</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//先json序列化</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sonic</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">rb</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;json序列化失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//构造http请求体</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">NewRequest</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">MethodPost</span>, <span style="color:#a6e22e">DeepseekURL</span>, <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">bs</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//添加请求头</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;Content-Type&#34;</span>, <span style="color:#e6db74">&#34;application/json&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;Authorization&#34;</span>, <span style="color:#e6db74">&#34;Bearer sk-b7c3725bbb2a4db8aca2d735b6c22d1c&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//发送请求</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Client</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Timeout</span>: <span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>, <span style="color:#75715e">//设置超时时间</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">response</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Do</span>(<span style="color:#a6e22e">request</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;发送请求失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//读取响应体</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">StatusCode</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">200</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">Body</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;请求失败&#34;</span>, string(<span style="color:#a6e22e">body</span>), <span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">StatusCode</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">Body</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(string(<span style="color:#a6e22e">body</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">rb</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Request</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Model</span>: <span style="color:#e6db74">&#34;deepseek-chat&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Messages</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span>{
+</span></span><span style="display:flex;"><span>			{<span style="color:#a6e22e">Role</span>: <span style="color:#e6db74">&#34;system&#34;</span>, <span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;你是一个AI助手，请回答用户的问题&#34;</span>},
+</span></span><span style="display:flex;"><span>			{<span style="color:#a6e22e">Role</span>: <span style="color:#e6db74">&#34;user&#34;</span>, <span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;离新年还有几天？&#34;</span>},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Stream</span>: <span style="color:#66d9ef">false</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ChatWithDeepseek</span>(<span style="color:#a6e22e">rb</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>查看回答</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#e6db74">&#34;choices&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;index&#34;</span>:0,<span style="color:#e6db74">&#34;message&#34;</span>:<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;role&#34;</span>:<span style="color:#e6db74">&#34;assistant&#34;</span>,<span style="color:#e6db74">&#34;content&#34;</span>:<span style="color:#e6db74">&#34;今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。  \n\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。  \n\n需要我帮你计算其他日子的倒计时吗？ 😊&#34;</span><span style="color:#f92672">}</span>,
+</span></span></code></pre></div><p>由此可见，大模型并不知道现在是几号。</p>
+<p>不是特别美观进行json的反序列化。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Choices</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Index</span>   <span style="color:#66d9ef">int</span>      <span style="color:#e6db74">`json:&#34;index&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Message</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Message</span> <span style="color:#e6db74">`json:&#34;message&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">ResponseBody</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Choices</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">Choices</span> <span style="color:#e6db74">`json:&#34;choices&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">//=====================</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//fmt.Println(string(body))</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">respBody</span> <span style="color:#a6e22e">ResponseBody</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">sonic</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#a6e22e">body</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">respBody</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;json反序列化失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">respBody</span>.<span style="color:#a6e22e">Choices</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">Message</span>.<span style="color:#a6e22e">Role</span>, <span style="color:#a6e22e">respBody</span>.<span style="color:#a6e22e">Choices</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">Message</span>.<span style="color:#a6e22e">Content</span>)
+</span></span></code></pre></div><h2 id="流式调用">流式调用</h2>
+<p>很简单，现在main函数把stream改为true</p>
+<p>然后打印流失输出</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>	<span style="color:#75715e">//打印流失返回结果</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buffer</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">2048</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">buffer</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;读取响应体失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Print</span>(string(<span style="color:#a6e22e">buffer</span>[:<span style="color:#a6e22e">n</span>]))
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>data: <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;id&#34;</span>:<span style="color:#e6db74">&#34;5b196ab2-4104-4052-bea3-d208853e869d&#34;</span>,<span style="color:#e6db74">&#34;object&#34;</span>:<span style="color:#e6db74">&#34;chat.completion.chunk&#34;</span>,<span style="color:#e6db74">&#34;created&#34;</span>:1768130035,<span style="color:#e6db74">&#34;model&#34;</span>:<span style="color:#e6db74">&#34;deepseek-chat&#34;</span>,<span style="color:#e6db74">&#34;system_fingerprint&#34;</span>:<span style="color:#e6db74">&#34;fp_eaab8d114b_prod0820_fp8_kvcache&#34;</span>,<span style="color:#e6db74">&#34;choices&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;index&#34;</span>:0,<span style="color:#e6db74">&#34;delta&#34;</span>:<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;content&#34;</span>:<span style="color:#e6db74">&#34;迎接&#34;</span><span style="color:#f92672">}</span>,<span style="color:#e6db74">&#34;logprobs&#34;</span>:null,<span style="color:#e6db74">&#34;finish_reason&#34;</span>:null<span style="color:#f92672">}]}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>data: <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;id&#34;</span>:<span style="color:#e6db74">&#34;5b196ab2-4104-4052-bea3-d208853e869d&#34;</span>,<span style="color:#e6db74">&#34;object&#34;</span>:<span style="color:#e6db74">&#34;chat.completion.chunk&#34;</span>,<span style="color:#e6db74">&#34;created&#34;</span>:1768130035,<span style="color:#e6db74">&#34;model&#34;</span>:<span style="color:#e6db74">&#34;deepseek-chat&#34;</span>,<span style="color:#e6db74">&#34;system_fingerprint&#34;</span>:<span style="color:#e6db74">&#34;fp_eaab8d114b_prod0820_fp8_kvcache&#34;</span>,<span style="color:#e6db74">&#34;choices&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;index&#34;</span>:0,<span style="color:#e6db74">&#34;delta&#34;</span>:<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;content&#34;</span>:<span style="color:#e6db74">&#34;新的一年&#34;</span><span style="color:#f92672">}</span>,<span style="color:#e6db74">&#34;logprobs&#34;</span>:null,<span style="color:#e6db74">&#34;finish_reason&#34;</span>:null<span style="color:#f92672">}]}</span>
+</span></span></code></pre></div><p>现在可以根据流式的输出格式进行反序列化</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>	<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Delta</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Content</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;content&#34;`</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">StreamChoice</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Index</span>        <span style="color:#66d9ef">int</span>    <span style="color:#e6db74">`json:&#34;index&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Delta</span>        <span style="color:#f92672">*</span><span style="color:#a6e22e">Delta</span> <span style="color:#e6db74">`json:&#34;delta&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Logprobs</span>     <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;logprobs&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">FinishReason</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;finish_reason&#34;`</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">ResStreamBody</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ID</span>                <span style="color:#66d9ef">string</span>          <span style="color:#e6db74">`json:&#34;id&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Object</span>            <span style="color:#66d9ef">string</span>          <span style="color:#e6db74">`json:&#34;object&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Created</span>           <span style="color:#66d9ef">int64</span>           <span style="color:#e6db74">`json:&#34;created&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Model</span>             <span style="color:#66d9ef">string</span>          <span style="color:#e6db74">`json:&#34;model&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">SystemFingerprint</span> <span style="color:#66d9ef">string</span>          <span style="color:#e6db74">`json:&#34;system_fingerprint&#34;`</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Choices</span>           []<span style="color:#f92672">*</span><span style="color:#a6e22e">StreamChoice</span> <span style="color:#e6db74">`json:&#34;choices&#34;`</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">//============================================</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buffer</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">2048</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">response</span>.<span style="color:#a6e22e">Body</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">buffer</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;读取响应体失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// fmt.Print(string(buffer[:n]))</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//根据data分割，删掉data: 然后进行反序列化</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">segment</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Split</span>(<span style="color:#a6e22e">buffer</span>[:<span style="color:#a6e22e">n</span>], []byte(<span style="color:#e6db74">&#34;data: &#34;</span>)) {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">//删除空白行和换行</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">segment</span> = <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">TrimSpace</span>(<span style="color:#a6e22e">segment</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">segment</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">//反序列化</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">respStreamBody</span> <span style="color:#a6e22e">ResStreamBody</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">sonic</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#a6e22e">segment</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">respStreamBody</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> string(<span style="color:#a6e22e">segment</span>) <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;[DONE]&#34;</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;json反序列化失败&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%s&#34;</span>, <span style="color:#a6e22e">respStreamBody</span>.<span style="color:#a6e22e">Choices</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">Delta</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>效果如下</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>今天是 **2024 年 <span style="color:#ae81ff">12</span> 月 <span style="color:#ae81ff">31</span> 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>- **农历新年（春节）**：2025 年 <span style="color:#ae81ff">1</span> 月 <span style="color:#ae81ff">29</span> 日（星期三）  
+</span></span><span style="display:flex;"><span>- **倒计时**：从今天（12 月 <span style="color:#ae81ff">31</span> 日）算起，还有 **29 天**。  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 <span style="color:#ae81ff">1</span> 日）** 就是新年啦！🎉  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>希望这些信息对你有帮助！ 😊
+</span></span></code></pre></div></section>
+
+  
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="/main.min.cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e.js" integrity="sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP&#43;DGNKHfuwvY7kxvUdBeoGlODJ6&#43;SfaPg==" crossorigin="anonymous" defer></script></html>
