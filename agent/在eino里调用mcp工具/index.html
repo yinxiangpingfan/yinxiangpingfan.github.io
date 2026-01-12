@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在Eino里调用MCP工具</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@在这里使用了Eino调用了魔塔社区的12306的mcp工具">
+    <meta name="author" content="EasyImpr/印象简单">
+    <link rel="canonical" href="http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/">
+
+    <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="在Eino里调用MCP工具">
+  <meta property="og:description" content="在这里使用了Eino调用了魔塔社区的12306的mcp工具">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-01-12T18:42:24+08:00">
+    <meta property="article:modified_time" content="2026-01-12T18:42:24+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Agent">
+      <meta property="og:see_also" content="http://localhost:1313/agent/mcp_go_sdk/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%A4%A9%E6%B0%94%E9%A2%84%E6%8A%A5%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E8%8E%B7%E5%8F%96%E7%94%A8%E6%88%B7%E7%9A%84%E4%BD%8D%E7%BD%AE%E5%9D%90%E6%A0%87/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AAeino%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/enio_adk%E8%B0%83%E7%94%A8%E5%A4%A7%E6%A8%A1%E5%9E%8B/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/eino%E8%B0%83%E7%94%A8%E5%A4%A7%E6%A8%A1%E5%9E%8B/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="在Eino里调用MCP工具">
+  <meta name="twitter:description" content="在这里使用了Eino调用了魔塔社区的12306的mcp工具">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "http://localhost:1313/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "在Eino里调用MCP工具",
+      "item": "http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "在Eino里调用MCP工具",
+  "name": "在Eino里调用MCP工具",
+  "description": "在这里使用了Eino调用了魔塔社区的12306的mcp工具\n",
+  "keywords": [
+    "golang", "agent"
+  ],
+  "articleBody": "在这里使用了Eino调用了魔塔社区的12306的mcp工具\n在Eino里调用MCP工具 魔塔社区官网\n需要用到的包\nenio_mcp \"github.com/cloudwego/eino-ext/components/tool/mcp\" \"github.com/cloudwego/eino/components/tool\" \"github.com/mark3labs/mcp-go/client\" \"github.com/mark3labs/mcp-go/mcp\" 创建mcp client func CreateMcpClient(url, name string) *client.Client { //创建mcp的client cli, err := client.NewStreamableHttpClient(url) if err != nil { log.Fatal(err) } //初始化mcp的client initRequest := mcp.InitializeRequest{} initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION initRequest.Params.ClientInfo = mcp.Implementation{ Name: name, Version: \"1.0.0\", } _, err = cli.Initialize(context.Background(), initRequest) if err != nil { log.Fatal(err) } return cli } client进行初始化 var ( trainCli *client.Client ) const ( TRAIN_MCP_URL = \"https://mcp.api-inference.modelscope.net/67a1aa6795ce4e/mcp\" TRAIN_MCP_NAME = \"12306-mcp\" ) func InitMcpClient() { trainCli = CreateMcpClient(TRAIN_MCP_URL, TRAIN_MCP_NAME) } 获取mcp的tool列表 func CreateMcp12306Tool() []tool.BaseTool { ctx := context.Background() tools, err := enio_mcp.GetTools(ctx, \u0026enio_mcp.Config{ Cli: trainCli, ToolNameList: []string{}, //填入需要的工具，不填则需要所有工具 }) if err != nil { log.Fatal(err) } return tools } func List12306Tool() { ctx := context.Background() tools := CreateMcp12306Tool() for _, tool := range tools { info, _ := tool.Info(ctx) fmt.Println(info.Name, info.Desc) } } 调用tool type GetTicketsRequest struct { FromStation string `json:\"fromStation\"` ToStation string `json:\"toStation\"` Date string `json:\"date\"` } func Use12306Tool() { toolName := \"get-tickets\" ctx := context.Background() tools, err := enio_mcp.GetTools(ctx, \u0026enio_mcp.Config{ Cli: trainCli, ToolNameList: []string{toolName}, //填入需要的工具，不填则需要所有工具 }) if err != nil { log.Fatal(err) } //basetool只能获取信息，不能运，所以要断言成InvokableTool tickerTool := tools[0].(tool.InvokableTool) request := \u0026GetTicketsRequest{ Date: time.Now().Add(24 * time.Hour).Format(\"2006-01-02\"), FromStation: \"BJP\", ToStation: \"SHH\", } jsonRequest, err := sonic.Marshal(request) if err != nil { log.Fatal(err) } response, err := tickerTool.InvokableRun(ctx, string(jsonRequest)) if err != nil { log.Fatal(err) } fmt.Println(response) } 最终运行 func main() { InitMcpClient() List12306Tool() Use12306Tool() } get-current-date 获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 \"yyyy-MM-dd\"。主要用于解析用户提到的相对日期（如“明天”、“下周三”），提供准确的日期输入。 get-stations-code-in-city 通过中文城市名查询该城市 **所有** 火车站的名称及其对应的 `station_code`，结果是一个包含多个车站信息的列表。 get-station-code-of-citys 通过中文城市名查询代表该城市的 `station_code`。此接口主要用于在用户提供**城市名**作为出发地或到达地时，为接口准备 `station_code` 参数。 get-station-code-by-names 通过具体的中文车站名查询其 `station_code` 和车站名。此接口主要用于在用户提供**具体车站名**作为出发地或到达地时，为接口准备 `station_code` 参数。 get-station-by-telecode 通过车站的 `station_telecode` 查询车站的详细信息，包括名称、拼音、所属城市等。此接口主要用于在已知 `telecode` 的情况下获取更完整的车站数据，或用于特殊查询及调试目的。一般用户对话流程中较少直接触发。 get-tickets 查询12306余票信息。 get-interline-tickets 查询12306中转余票信息。尚且只支持查询前十条。 get-train-route-stations 查询特定列车车次在指定区间内的途径车站、到站时间、出发时间及停留时间等详细经停信息。当用户询问某趟具体列车的经停站时使用此接口。 {\"content\":[{\"type\":\"text\",\"text\":\"车次|出发站 -\\u003e 到达站|出发时间 -\\u003e 到达时间|历时\\nG103 北京南(telecode:VNP) -\\u003e 上海虹桥(telecode:AOH) 06:20 -\\u003e 11:58 历时：05:38\\n- 商务座: 剩余10张票 1873元\\n- 一等座: 有票 930元\\n- 二等座: 有票 553元\\n- 无座: 有票 553元\\nG1 北京南(telecode:VNP) -\\u003e 上海(telecode:SHH) 07:00 -\\u003e 11:29 历时：04:29\\n- 商务座: 剩余6张票 2337元\\n- 一等座: 无票 1070元\\n- 二等座: 有票 669元\\n- 优选一等座: 无票 1471元\\n- 无座: 有票 669元\\nG105 北京南(telecode:VNP) -\\u003e 上海虹桥(telecode:AOH) 07:17 -\\u003e 13:03 历时：05:46\\n- 商务座: 剩余6张票 1998元\\n- 一等座: 有票 1006元\\n- 二等座: 有票 598元\\n- 无座: 有票 598元\\nG107 北京南(telecode:VNP) -\\u003e 上海虹桥(telecode:AOH) 07:25 -\\u003e 13:12 历时：05:47\\n- 商务座: 剩余17张票 1873元\\n- 一等座: 有票 930元\\n- 二等座: 有票 553元\\n- 无座: 有票 553元\\nG3 北京(telecode:BJP) -\\u003e 上海(telecode:SHH) 07:40 -\\u003e 12:32 历时：04:52\\n- 商务座: 无票 2350元\\n- 一等座: 无票 1076元\\n- 二等座: 有票 673元\\n- 无座: 有票 673元\\nG109 北京南(telecode:VNP) -\\u003e 上海虹桥(telecode:AOH) 07:45 -\\u003e 13:49 历时：06:04\\n- 商务座: 剩余8张票 1998元\\n- 一等座: 有票 969元\\n- 二等座: 有票 576元\\n- 无座: 有票 576元\\nG3 北京南(telecode:VNP) -\\u003e 上海(telecode:SHH) 08:00 -\\u003e 12:32]} ",
+  "wordCount" : "386",
+  "inLanguage": "zh",
+  "datePublished": "2026-01-12T18:42:24+08:00",
+  "dateModified": "2026-01-12T18:42:24+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "EasyImpr/印象简单"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://localhost:1313/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    </head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>在Eino里调用MCP工具</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年1月12日&nbsp;· 386 字&nbsp;· 2 分钟</small>
+
+  
+<p>
+
+  <div class="blog-toc">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#创建mcp-client">创建mcp client</a></li>
+    <li><a href="#client进行初始化">client进行初始化</a></li>
+    <li><a href="#获取mcp的tool列表">获取mcp的tool列表</a></li>
+    <li><a href="#调用tool">调用tool</a></li>
+    <li><a href="#最终运行">最终运行</a></li>
+  </ul>
+</nav>
+  </div>
+
+  <section class="blog-content"><p>在这里使用了Eino调用了魔塔社区的12306的mcp工具</p>
+<h1 id="在eino里调用mcp工具">在Eino里调用MCP工具</h1>
+<p><a href="https://modelscope.cn/">魔塔社区官网</a></p>
+<p>需要用到的包</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#a6e22e">enio_mcp</span> <span style="color:#e6db74">&#34;github.com/cloudwego/eino-ext/components/tool/mcp&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/components/tool&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/mark3labs/mcp-go/client&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/mark3labs/mcp-go/mcp&#34;</span>
+</span></span></code></pre></div><h2 id="创建mcp-client">创建mcp client</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">CreateMcpClient</span>(<span style="color:#a6e22e">url</span>, <span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Client</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//创建mcp的client</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cli</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">NewStreamableHttpClient</span>(<span style="color:#a6e22e">url</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//初始化mcp的client</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">initRequest</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">mcp</span>.<span style="color:#a6e22e">InitializeRequest</span>{}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">initRequest</span>.<span style="color:#a6e22e">Params</span>.<span style="color:#a6e22e">ProtocolVersion</span> = <span style="color:#a6e22e">mcp</span>.<span style="color:#a6e22e">LATEST_PROTOCOL_VERSION</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">initRequest</span>.<span style="color:#a6e22e">Params</span>.<span style="color:#a6e22e">ClientInfo</span> = <span style="color:#a6e22e">mcp</span>.<span style="color:#a6e22e">Implementation</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Name</span>:    <span style="color:#a6e22e">name</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Version</span>: <span style="color:#e6db74">&#34;1.0.0&#34;</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">cli</span>.<span style="color:#a6e22e">Initialize</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), <span style="color:#a6e22e">initRequest</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">cli</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="client进行初始化">client进行初始化</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">trainCli</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Client</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">TRAIN_MCP_URL</span>  = <span style="color:#e6db74">&#34;https://mcp.api-inference.modelscope.net/67a1aa6795ce4e/mcp&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">TRAIN_MCP_NAME</span> = <span style="color:#e6db74">&#34;12306-mcp&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">InitMcpClient</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">trainCli</span> = <span style="color:#a6e22e">CreateMcpClient</span>(<span style="color:#a6e22e">TRAIN_MCP_URL</span>, <span style="color:#a6e22e">TRAIN_MCP_NAME</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="获取mcp的tool列表">获取mcp的tool列表</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">CreateMcp12306Tool</span>() []<span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">BaseTool</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tools</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">enio_mcp</span>.<span style="color:#a6e22e">GetTools</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">enio_mcp</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Cli</span>:          <span style="color:#a6e22e">trainCli</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ToolNameList</span>: []<span style="color:#66d9ef">string</span>{}, <span style="color:#75715e">//填入需要的工具，不填则需要所有工具</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">tools</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">List12306Tool</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tools</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">CreateMcp12306Tool</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">tool</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">tools</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">info</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">Info</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Desc</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="调用tool">调用tool</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">GetTicketsRequest</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">FromStation</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;fromStation&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ToStation</span>   <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;toStation&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Date</span>        <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;date&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Use12306Tool</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">toolName</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;get-tickets&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tools</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">enio_mcp</span>.<span style="color:#a6e22e">GetTools</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">enio_mcp</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Cli</span>:          <span style="color:#a6e22e">trainCli</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ToolNameList</span>: []<span style="color:#66d9ef">string</span>{<span style="color:#a6e22e">toolName</span>}, <span style="color:#75715e">//填入需要的工具，不填则需要所有工具</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//basetool只能获取信息，不能运，所以要断言成InvokableTool</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tickerTool</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tools</span>[<span style="color:#ae81ff">0</span>].(<span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">InvokableTool</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">GetTicketsRequest</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Date</span>:        <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">24</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>).<span style="color:#a6e22e">Format</span>(<span style="color:#e6db74">&#34;2006-01-02&#34;</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">FromStation</span>: <span style="color:#e6db74">&#34;BJP&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ToStation</span>:   <span style="color:#e6db74">&#34;SHH&#34;</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">jsonRequest</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sonic</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">request</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">response</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tickerTool</span>.<span style="color:#a6e22e">InvokableRun</span>(<span style="color:#a6e22e">ctx</span>, string(<span style="color:#a6e22e">jsonRequest</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">response</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="最终运行">最终运行</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">InitMcpClient</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">List12306Tool</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Use12306Tool</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>get-current-date 获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 <span style="color:#e6db74">&#34;yyyy-MM-dd&#34;</span>。主要用于解析用户提到的相对日期（如“明天”、“下周三”），提供准确的日期输入。
+</span></span><span style="display:flex;"><span>get-stations-code-in-city 通过中文城市名查询该城市 **所有** 火车站的名称及其对应的 <span style="color:#e6db74">`</span>station_code<span style="color:#e6db74">`</span>，结果是一个包含多个车站信息的列表。
+</span></span><span style="display:flex;"><span>get-station-code-of-citys 通过中文城市名查询代表该城市的 <span style="color:#e6db74">`</span>station_code<span style="color:#e6db74">`</span>。此接口主要用于在用户提供**城市名**作为出发地或到达地时，为接口准备 <span style="color:#e6db74">`</span>station_code<span style="color:#e6db74">`</span> 参数。
+</span></span><span style="display:flex;"><span>get-station-code-by-names 通过具体的中文车站名查询其 <span style="color:#e6db74">`</span>station_code<span style="color:#e6db74">`</span> 和车站名。此接口主要用于在用户提供**具体车站名**作为出发地或到达地时，为接口准备 <span style="color:#e6db74">`</span>station_code<span style="color:#e6db74">`</span> 参数。
+</span></span><span style="display:flex;"><span>get-station-by-telecode 通过车站的 <span style="color:#e6db74">`</span>station_telecode<span style="color:#e6db74">`</span> 查询车站的详细信息，包括名称、拼音、所属城市等。此接口主要用于在已知 <span style="color:#e6db74">`</span>telecode<span style="color:#e6db74">`</span> 的情况下获取更完整的车站数据，或用于特殊查询及调试目的。一般用户对话流程中较少直接触发。
+</span></span><span style="display:flex;"><span>get-tickets 查询12306余票信息。
+</span></span><span style="display:flex;"><span>get-interline-tickets 查询12306中转余票信息。尚且只支持查询前十条。
+</span></span><span style="display:flex;"><span>get-train-route-stations 查询特定列车车次在指定区间内的途径车站、到站时间、出发时间及停留时间等详细经停信息。当用户询问某趟具体列车的经停站时使用此接口。
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span><span style="color:#e6db74">&#34;content&#34;</span>:<span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;type&#34;</span>:<span style="color:#e6db74">&#34;text&#34;</span>,<span style="color:#e6db74">&#34;text&#34;</span>:<span style="color:#e6db74">&#34;车次|出发站 -\u003e 到达站|出发时间 -\u003e 到达时间|历时\nG103 北京南(telecode:VNP) -\u003e 上海虹桥(telecode:AOH) 06:20 -\u003e 11:58 历时：05:38\n- 商务座: 剩余10张票 1873元\n- 一等座: 有票 930元\n- 二等座: 有票 553元\n- 无座: 有票 553元\nG1 北京南(telecode:VNP) -\u003e 上海(telecode:SHH) 07:00 -\u003e 11:29 历时：04:29\n- 商务座: 剩余6张票 2337元\n- 一等座: 无票 1070元\n- 二等座: 有票 669元\n- 优选一等座: 无票 1471元\n- 无座: 有票 669元\nG105 北京南(telecode:VNP) -\u003e 上海虹桥(telecode:AOH) 07:17 -\u003e 13:03 历时：05:46\n- 商务座: 剩余6张票 1998元\n- 一等座: 有票 1006元\n- 二等座: 有票 598元\n- 无座: 有票 598元\nG107 北京南(telecode:VNP) -\u003e 上海虹桥(telecode:AOH) 07:25 -\u003e 13:12 历时：05:47\n- 商务座: 剩余17张票 1873元\n- 一等座: 有票 930元\n- 二等座: 有票 553元\n- 无座: 有票 553元\nG3 北京(telecode:BJP) -\u003e 上海(telecode:SHH) 07:40 -\u003e 12:32 历时：04:52\n- 商务座: 无票 2350元\n- 一等座: 无票 1076元\n- 二等座: 有票 673元\n- 无座: 有票 673元\nG109 北京南(telecode:VNP) -\u003e 上海虹桥(telecode:AOH) 07:45 -\u003e 13:49 历时：06:04\n- 商务座: 剩余8张票 1998元\n- 一等座: 有票 969元\n- 二等座: 有票 576元\n- 无座: 有票 576元\nG3 北京南(telecode:VNP) -\u003e 上海(telecode:SHH) 08:00 -\u003e 12:32]}
+</span></span></span></code></pre></div></section>
+
+  
+  
+  <div class="paginator">
+    
+    
+    <a class="next" href="http://localhost:1313/agent/mcp_go_sdk/"><span>MCP Go SDK</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="http://localhost:1313/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="/main.min.cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e.js" integrity="sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP&#43;DGNKHfuwvY7kxvUdBeoGlODJ6&#43;SfaPg==" crossorigin="anonymous" defer></script></html>

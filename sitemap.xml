@@ -2,10 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:1313/tags/agent/</loc>
-    <lastmod>2026-01-12T15:54:18+08:00</lastmod>
-  </url><url>
     <loc>http://localhost:1313/agent/</loc>
+    <lastmod>2026-01-12T18:42:24+08:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/</loc>
+    <lastmod>2026-01-12T18:42:24+08:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/</loc>
+    <lastmod>2026-01-12T18:42:24+08:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/tags/agent/</loc>
     <lastmod>2026-01-12T15:54:18+08:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/tags/golang/</loc>
@@ -21,9 +27,6 @@
     <lastmod>2026-01-12T15:54:18+08:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/series/%E5%BC%80%E5%8F%91/</loc>
-    <lastmod>2026-01-12T15:54:18+08:00</lastmod>
-  </url><url>
-    <loc>http://localhost:1313/</loc>
     <lastmod>2026-01-12T15:54:18+08:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/agent/%E5%A4%A9%E6%B0%94%E9%A2%84%E6%8A%A5%E5%B7%A5%E5%85%B7/</loc>
