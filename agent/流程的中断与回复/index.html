@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流程的中断与回复</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@关于agent在流程中的中断，以及回复的内容">
+    <meta name="author" content="EasyImpr/印象简单">
+    <link rel="canonical" href="http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/">
+
+    <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="流程的中断与回复">
+  <meta property="og:description" content="关于agent在流程中的中断，以及回复的内容">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-01-13T16:31:14+08:00">
+    <meta property="article:modified_time" content="2026-01-13T16:31:14+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Agent">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E9%80%9A%E8%BF%87adk%E8%B0%83%E7%94%A8ai_agent%E4%BB%A5%E5%8F%8A%E5%8E%86%E5%8F%B2%E6%B6%88%E6%81%AF%E7%9A%84%E4%BF%9D%E5%AD%98/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/mcp_go_sdk/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%A4%A9%E6%B0%94%E9%A2%84%E6%8A%A5%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E8%8E%B7%E5%8F%96%E7%94%A8%E6%88%B7%E7%9A%84%E4%BD%8D%E7%BD%AE%E5%9D%90%E6%A0%87/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AAeino%E5%B7%A5%E5%85%B7/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="流程的中断与回复">
+  <meta name="twitter:description" content="关于agent在流程中的中断，以及回复的内容">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "http://localhost:1313/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "流程的中断与回复",
+      "item": "http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "流程的中断与回复",
+  "name": "流程的中断与回复",
+  "description": "关于agent在流程中的中断，以及回复的内容\n",
+  "keywords": [
+    "golang", "agent"
+  ],
+  "articleBody": "关于agent在流程中的中断，以及回复的内容\n流程的中断与回复 在上一节中，假如我们禁用掉获取位置的工具，那么大模型将没法知道你的位置，这时候，如果让大模型中断，询问你的位置，用户输入位置之后，流程再回复，大模型不就可以继续工作了\n中断与回复的工具 package mytool import ( \"context\" \"log\" \"github.com/cloudwego/eino/components/tool\" \"github.com/cloudwego/eino/components/tool/utils\" \"github.com/cloudwego/eino/compose\" ) const AskForClarificationToolName = \"ask_for_clarification\" /* 支持中断的Tool。当用户未提供必要信息时，向用户问清楚。【固定写法】 */ type askForClarificationOptions struct { NewInput *string } func WithNewInput(input string) tool.Option { return tool.WrapImplSpecificOptFn(func(t *askForClarificationOptions) { t.NewInput = \u0026input }) } type AskForClarificationInput struct { Question string `json:\"question\" jsonschema:\"description=为了获得必要的缺失信息，你需要向用户询问的问题\"` } // NewAskForClarificationTool 构造支持中断的Tool func NewAskForClarificationTool() tool.InvokableTool { t, err := utils.InferOptionableTool( AskForClarificationToolName, \"当用户的请求含糊不清或缺乏继续所需的信息时，调用此工具。在你能有效地使用其他工具之前，用它来问一个后续问题，以获得你需要的细节。\", func(ctx context.Context, input *AskForClarificationInput, opts ...tool.Option) (output string, err error) { o := tool.GetImplSpecificOptions[askForClarificationOptions](nil, opts...) if o.NewInput == nil { return \"\", compose.Interrupt(ctx, input.Question) } return *o.NewInput, nil }) if err != nil { log.Fatal(err) } return t } 缓存会话 最好使用redis\nimport ( \"context\" \"github.com/cloudwego/eino/compose\" ) /* 创建一个类，实现接口 type CheckPointStore interface { Get(ctx context.Context, checkPointID string) ([]byte, bool, error) Set(ctx context.Context, checkPointID string, checkPoint []byte) error } */ type InMemoryStore struct { mem map[string][]byte // 基于本地内存 存储KV，在生产环境中最好基于Redis来存储KV，因为一旦go进程挂了，数据就丢失了 } func (i *InMemoryStore) Set(ctx context.Context, key string, value []byte) error { // log.Printf(\"store %s\", key) i.mem[key] = value return nil } func (i *InMemoryStore) Get(ctx context.Context, key string) ([]byte, bool, error) { // log.Printf(\"read %s\", key) v, ok := i.mem[key] return v, ok, nil } func NewInMemoryStore() compose.CheckPointStore { return \u0026InMemoryStore{ mem: make(map[string][]byte), } } 调用工具 func InterruptResume() { ctx := context.Background() //创建model model := mytool.CreateDeepseekModel() //创建工具集 tools := []tool.BaseTool{ //时间 mytool.CreateTimeTool(), //天气 mytool.CreateWeatherTool(), //中断工具 mytool.NewAskForClarificationTool(), //位置 //mytool.CreateLocationTool(), } //创建agent agent, err := adk.NewChatModelAgent(ctx, \u0026adk.ChatModelAgentConfig{ Name: \"activity_agent\", Description: \"活动策划大师\", Instruction: \"请根据未来天气安排活动\", //一个agent可能是另一个agent的subagent，所以agent的功能需要描绘清楚 Model: model, ToolsConfig: adk.ToolsConfig{ ToolsNodeConfig: compose.ToolsNodeConfig{ Tools: tools, }, }, }) if err != nil { panic(err) } //运行agent runner := adk.NewRunner(ctx, adk.RunnerConfig{ Agent: agent, CheckPointStore: mytool.NewInMemoryStore(),//实现中断与回复需要一个缓存来记录会话 }) messages := []adk.Message{ {Role: schema.User, Content: \"明天的天气适合开运动会吗\"}, } checkPointId := xid.New().String()// 指定使用的断点ID //返回一个迭代器 iter := runner.Run(ctx, messages, adk.WithCheckPointID(checkPointId))// 指定使用的断点ID //循环迭代器 var lastMsg adk.Message LB: for { //迭代器获取事件 event, ok := iter.Next() if !ok { break } if event.Err != nil { panic(event.Err) } msg, err := event.Output.MessageOutput.GetMessage() if err != nil { panic(err) } fmt.Printf(\"%s:%s\\n\", msg.Role, msg.Content) lastMsg = msg //遍历使用的工具，查看是否调用中断回复工具 if len(msg.ToolCalls) \u003e 0 { for _, toolCall := range msg.ToolCalls { if toolCall.Function.Name == mytool.AskForClarificationToolName { var req mytool.AskForClarificationInput if err := sonic.UnmarshalString(toolCall.Function.Arguments, \u0026req); err == nil { //先向用户展示问题 fmt.Println(req.Question) // 从终端获取用户的输入 scanner := bufio.NewScanner(os.Stdin) fmt.Println(\"请在此输入答案：\") scanner.Scan() fmt.Println() input := scanner.Text() // 从断点处恢复 iter, err = runner.Resume(ctx, checkPointId, // 使用用户输入的答案，继续执行Agent adk.WithToolOptions([]tool.Option{mytool.WithNewInput(input)})) if err != nil { log.Fatal(err) } // log.Printf(\"resume from checkpoint %s\",checkPointId) continue LB } else { log.Fatal(err) } } } } } fmt.Println(\"lastMsg:\", lastMsg.Content) } 调用结果\nassistant:我需要知道您所在的城市才能为您查询明天的天气情况。请问您是在哪个城市呢？这样我就能为您查询明天的天气预报，并判断是否适合开运动会了。 请问您是在哪个城市呢？这样我就能为您查询明天的天气预报，并判断是否适合开运动会了。 请在此输入答案： 鄂尔多斯市 150600 tool:鄂尔多斯市 150600 assistant:好的，我现在为您查询鄂尔多斯市明天的天气预报，然后分析是否适合开运动会。 tool:天气预报: 白天天气: 扬沙, 夜晚天气: 晴, 白天温度: 2℃, 夜晚温度: -5℃, 白天风向: 西北, 夜晚风向: 西北, 白天风力: 1-3, 夜晚风力: 1-3 assistant:根据鄂尔多斯市明天的天气预报，我来分析是否适合开运动会： **明天天气情况：** - 白天天气：扬沙 - 夜晚天气：晴 - 白天温度：2℃ - 夜晚温度：-5℃ - 风向：西北风 - 风力：1-3级 **是否适合开运动会的分析：** **不建议开运动会的原因：** 1. **扬沙天气**：这是最主要的问题。扬沙天气会导致： - 空气质量差，能见度降低 - 沙尘可能影响运动员的呼吸和视线 - 场地和设备容易积沙 - 观众和工作人员也会感到不适 2. **温度较低**：白天只有2℃，对于户外运动会来说偏冷，运动员和观众都可能感到寒冷不适。 **建议：** 考虑到扬沙天气对户外活动的严重影响，**不建议明天在鄂尔多斯市开运动会**。扬沙不仅会影响比赛质量，还可能对参与者的健康造成影响。 如果您必须举办运动会，建议： 1. 延期到天气条件更好的日子 2. 或者考虑在室内场馆举办 您希望我查询后天或大后天的天气情况，看看是否有更适合的日子吗？ lastMsg: 根据鄂尔多斯市明天的天气预报，我来分析是否适合开运动会： **明天天气情况：** - 白天天气：扬沙 - 夜晚天气：晴 - 白天温度：2℃ - 夜晚温度：-5℃ - 风向：西北风 - 风力：1-3级 **是否适合开运动会的分析：** **不建议开运动会的原因：** 1. **扬沙天气**：这是最主要的问题。扬沙天气会导致： - 空气质量差，能见度降低 - 沙尘可能影响运动员的呼吸和视线 - 场地和设备容易积沙 - 观众和工作人员也会感到不适 2. **温度较低**：白天只有2℃，对于户外运动会来说偏冷，运动员和观众都可能感到寒冷不适。 **建议：** 考虑到扬沙天气对户外活动的严重影响，**不建议明天在鄂尔多斯市开运动会**。扬沙不仅会影响比赛质量，还可能对参与者的健康造成影响。 如果您必须举办运动会，建议： 1. 延期到天气条件更好的日子 2. 或者考虑在室内场馆举办 ",
+  "wordCount" : "499",
+  "inLanguage": "zh",
+  "datePublished": "2026-01-13T16:31:14+08:00",
+  "dateModified": "2026-01-13T16:31:14+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "EasyImpr/印象简单"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://localhost:1313/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    </head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>流程的中断与回复</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年1月13日&nbsp;· 499 字&nbsp;· 3 分钟</small>
+
+  
+<p>
+
+  <div class="blog-toc">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#中断与回复的工具">中断与回复的工具</a></li>
+    <li><a href="#缓存会话">缓存会话</a></li>
+    <li><a href="#调用工具">调用工具</a></li>
+  </ul>
+</nav>
+  </div>
+
+  <section class="blog-content"><p>关于agent在流程中的中断，以及回复的内容</p>
+<h1 id="流程的中断与回复">流程的中断与回复</h1>
+<p>在上一节中，假如我们禁用掉获取位置的工具，那么大模型将没法知道你的位置，这时候，如果让大模型中断，询问你的位置，用户输入位置之后，流程再回复，大模型不就可以继续工作了</p>
+<h2 id="中断与回复的工具">中断与回复的工具</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">mytool</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/components/tool&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/components/tool/utils&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/compose&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">AskForClarificationToolName</span> = <span style="color:#e6db74">&#34;ask_for_clarification&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">支持中断的Tool。当用户未提供必要信息时，向用户问清楚。【固定写法】
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">*/</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">askForClarificationOptions</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">NewInput</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">WithNewInput</span>(<span style="color:#a6e22e">input</span> <span style="color:#66d9ef">string</span>) <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">Option</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">WrapImplSpecificOptFn</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">askForClarificationOptions</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">NewInput</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">input</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">AskForClarificationInput</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Question</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`json:&#34;question&#34; jsonschema:&#34;description=为了获得必要的缺失信息，你需要向用户询问的问题&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NewAskForClarificationTool 构造支持中断的Tool</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewAskForClarificationTool</span>() <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">InvokableTool</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">t</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">utils</span>.<span style="color:#a6e22e">InferOptionableTool</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">AskForClarificationToolName</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#e6db74">&#34;当用户的请求含糊不清或缺乏继续所需的信息时，调用此工具。在你能有效地使用其他工具之前，用它来问一个后续问题，以获得你需要的细节。&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AskForClarificationInput</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">Option</span>) (<span style="color:#a6e22e">output</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">o</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">GetImplSpecificOptions</span>[<span style="color:#a6e22e">askForClarificationOptions</span>](<span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">o</span>.<span style="color:#a6e22e">NewInput</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">Interrupt</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>.<span style="color:#a6e22e">Question</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">o</span>.<span style="color:#a6e22e">NewInput</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">t</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="缓存会话">缓存会话</h2>
+<p>最好使用redis</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/compose&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">创建一个类，实现接口
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	type CheckPointStore interface {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		Get(ctx context.Context, checkPointID string) ([]byte, bool, error)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">		Set(ctx context.Context, checkPointID string, checkPoint []byte) error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">	}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">*/</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">InMemoryStore</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mem</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>][]<span style="color:#66d9ef">byte</span> <span style="color:#75715e">//  基于本地内存 存储KV，在生产环境中最好基于Redis来存储KV，因为一旦go进程挂了，数据就丢失了</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">InMemoryStore</span>) <span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">value</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// log.Printf(&#34;store %s&#34;, key)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">i</span>.<span style="color:#a6e22e">mem</span>[<span style="color:#a6e22e">key</span>] = <span style="color:#a6e22e">value</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">InMemoryStore</span>) <span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>) ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">bool</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// log.Printf(&#34;read %s&#34;, key)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">i</span>.<span style="color:#a6e22e">mem</span>[<span style="color:#a6e22e">key</span>]
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewInMemoryStore</span>() <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">CheckPointStore</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">InMemoryStore</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mem</span>: make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>][]<span style="color:#66d9ef">byte</span>),
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="调用工具">调用工具</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">InterruptResume</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//创建model</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">model</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">CreateDeepseekModel</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//创建工具集</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tools</span> <span style="color:#f92672">:=</span> []<span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">BaseTool</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//时间</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">CreateTimeTool</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//天气</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">CreateWeatherTool</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//中断工具</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">NewAskForClarificationTool</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//位置</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//mytool.CreateLocationTool(),</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//创建agent</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">agent</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">NewChatModelAgent</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">ChatModelAgentConfig</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Name</span>:        <span style="color:#e6db74">&#34;activity_agent&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Description</span>: <span style="color:#e6db74">&#34;活动策划大师&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Instruction</span>: <span style="color:#e6db74">&#34;请根据未来天气安排活动&#34;</span>, <span style="color:#75715e">//一个agent可能是另一个agent的subagent，所以agent的功能需要描绘清楚</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Model</span>:       <span style="color:#a6e22e">model</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ToolsConfig</span>: <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">ToolsConfig</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ToolsNodeConfig</span>: <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">ToolsNodeConfig</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">Tools</span>: <span style="color:#a6e22e">tools</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//运行agent</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">runner</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">NewRunner</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">RunnerConfig</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Agent</span>:           <span style="color:#a6e22e">agent</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">CheckPointStore</span>: <span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">NewInMemoryStore</span>(),<span style="color:#75715e">//实现中断与回复需要一个缓存来记录会话</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">messages</span> <span style="color:#f92672">:=</span> []<span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">Message</span>{
+</span></span><span style="display:flex;"><span>		{<span style="color:#a6e22e">Role</span>: <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">User</span>, <span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;明天的天气适合开运动会吗&#34;</span>},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">checkPointId</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">xid</span>.<span style="color:#a6e22e">New</span>().<span style="color:#a6e22e">String</span>()<span style="color:#75715e">// 指定使用的断点ID</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//返回一个迭代器</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">iter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runner</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">messages</span>, <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">WithCheckPointID</span>(<span style="color:#a6e22e">checkPointId</span>))<span style="color:#75715e">// 指定使用的断点ID</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//循环迭代器</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">lastMsg</span> <span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">Message</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">LB</span>:
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//迭代器获取事件</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">event</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">iter</span>.<span style="color:#a6e22e">Next</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">event</span>.<span style="color:#a6e22e">Err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			panic(<span style="color:#a6e22e">event</span>.<span style="color:#a6e22e">Err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">event</span>.<span style="color:#a6e22e">Output</span>.<span style="color:#a6e22e">MessageOutput</span>.<span style="color:#a6e22e">GetMessage</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%s:%s\n&#34;</span>, <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Role</span>, <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lastMsg</span> = <span style="color:#a6e22e">msg</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//遍历使用的工具，查看是否调用中断回复工具</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">ToolCalls</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">toolCall</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">ToolCalls</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">toolCall</span>.<span style="color:#a6e22e">Function</span>.<span style="color:#a6e22e">Name</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">AskForClarificationToolName</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">req</span> <span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">AskForClarificationInput</span>
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sonic</span>.<span style="color:#a6e22e">UnmarshalString</span>(<span style="color:#a6e22e">toolCall</span>.<span style="color:#a6e22e">Function</span>.<span style="color:#a6e22e">Arguments</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">req</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>                        <span style="color:#75715e">//先向用户展示问题</span>
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Question</span>)
+</span></span><span style="display:flex;"><span>						<span style="color:#75715e">// 从终端获取用户的输入</span>
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">scanner</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewScanner</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>)
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;请在此输入答案：&#34;</span>)
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Scan</span>()
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>()
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scanner</span>.<span style="color:#a6e22e">Text</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>						<span style="color:#75715e">// 从断点处恢复</span>
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">iter</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">runner</span>.<span style="color:#a6e22e">Resume</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">checkPointId</span>,
+</span></span><span style="display:flex;"><span>							<span style="color:#75715e">// 使用用户输入的答案，继续执行Agent</span>
+</span></span><span style="display:flex;"><span>							<span style="color:#a6e22e">adk</span>.<span style="color:#a6e22e">WithToolOptions</span>([]<span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">Option</span>{<span style="color:#a6e22e">mytool</span>.<span style="color:#a6e22e">WithNewInput</span>(<span style="color:#a6e22e">input</span>)}))
+</span></span><span style="display:flex;"><span>						<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>							<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>						}
+</span></span><span style="display:flex;"><span>						<span style="color:#75715e">// log.Printf(&#34;resume from checkpoint %s&#34;,checkPointId)</span>
+</span></span><span style="display:flex;"><span>						<span style="color:#66d9ef">continue</span> <span style="color:#a6e22e">LB</span>
+</span></span><span style="display:flex;"><span>					} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>					}
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;lastMsg:&#34;</span>, <span style="color:#a6e22e">lastMsg</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>调用结果</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>assistant:我需要知道您所在的城市才能为您查询明天的天气情况。请问您是在哪个城市呢？这样我就能为您查询明天的天气预报，并判断是否适合开运动会了。
+</span></span><span style="display:flex;"><span>请问您是在哪个城市呢？这样我就能为您查询明天的天气预报，并判断是否适合开运动会了。
+</span></span><span style="display:flex;"><span>请在此输入答案：
+</span></span><span style="display:flex;"><span>鄂尔多斯市 <span style="color:#ae81ff">150600</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tool:鄂尔多斯市 <span style="color:#ae81ff">150600</span>
+</span></span><span style="display:flex;"><span>assistant:好的，我现在为您查询鄂尔多斯市明天的天气预报，然后分析是否适合开运动会。
+</span></span><span style="display:flex;"><span>tool:天气预报: 白天天气: 扬沙, 夜晚天气: 晴, 白天温度: 2℃, 夜晚温度: -5℃, 白天风向: 西北, 夜晚风向: 西北, 白天风力: 1-3, 夜晚风力: 1-3
+</span></span><span style="display:flex;"><span>assistant:根据鄂尔多斯市明天的天气预报，我来分析是否适合开运动会：
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**明天天气情况：**
+</span></span><span style="display:flex;"><span>- 白天天气：扬沙
+</span></span><span style="display:flex;"><span>- 夜晚天气：晴
+</span></span><span style="display:flex;"><span>- 白天温度：2℃
+</span></span><span style="display:flex;"><span>- 夜晚温度：-5℃
+</span></span><span style="display:flex;"><span>- 风向：西北风
+</span></span><span style="display:flex;"><span>- 风力：1-3级
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**是否适合开运动会的分析：**
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**不建议开运动会的原因：**
+</span></span><span style="display:flex;"><span>1. **扬沙天气**：这是最主要的问题。扬沙天气会导致：
+</span></span><span style="display:flex;"><span>   - 空气质量差，能见度降低
+</span></span><span style="display:flex;"><span>   - 沙尘可能影响运动员的呼吸和视线
+</span></span><span style="display:flex;"><span>   - 场地和设备容易积沙
+</span></span><span style="display:flex;"><span>   - 观众和工作人员也会感到不适
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2. **温度较低**：白天只有2℃，对于户外运动会来说偏冷，运动员和观众都可能感到寒冷不适。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**建议：**
+</span></span><span style="display:flex;"><span>考虑到扬沙天气对户外活动的严重影响，**不建议明天在鄂尔多斯市开运动会**。扬沙不仅会影响比赛质量，还可能对参与者的健康造成影响。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>如果您必须举办运动会，建议：
+</span></span><span style="display:flex;"><span>1. 延期到天气条件更好的日子
+</span></span><span style="display:flex;"><span>2. 或者考虑在室内场馆举办
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>您希望我查询后天或大后天的天气情况，看看是否有更适合的日子吗？
+</span></span><span style="display:flex;"><span>lastMsg: 根据鄂尔多斯市明天的天气预报，我来分析是否适合开运动会：
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**明天天气情况：**
+</span></span><span style="display:flex;"><span>- 白天天气：扬沙
+</span></span><span style="display:flex;"><span>- 夜晚天气：晴
+</span></span><span style="display:flex;"><span>- 白天温度：2℃
+</span></span><span style="display:flex;"><span>- 夜晚温度：-5℃
+</span></span><span style="display:flex;"><span>- 风向：西北风
+</span></span><span style="display:flex;"><span>- 风力：1-3级
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**是否适合开运动会的分析：**
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**不建议开运动会的原因：**
+</span></span><span style="display:flex;"><span>1. **扬沙天气**：这是最主要的问题。扬沙天气会导致：
+</span></span><span style="display:flex;"><span>   - 空气质量差，能见度降低
+</span></span><span style="display:flex;"><span>   - 沙尘可能影响运动员的呼吸和视线
+</span></span><span style="display:flex;"><span>   - 场地和设备容易积沙
+</span></span><span style="display:flex;"><span>   - 观众和工作人员也会感到不适
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2. **温度较低**：白天只有2℃，对于户外运动会来说偏冷，运动员和观众都可能感到寒冷不适。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>**建议：**
+</span></span><span style="display:flex;"><span>考虑到扬沙天气对户外活动的严重影响，**不建议明天在鄂尔多斯市开运动会**。扬沙不仅会影响比赛质量，还可能对参与者的健康造成影响。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>如果您必须举办运动会，建议：
+</span></span><span style="display:flex;"><span>1. 延期到天气条件更好的日子
+</span></span><span style="display:flex;"><span>2. 或者考虑在室内场馆举办
+</span></span></code></pre></div></section>
+
+  
+  
+  <div class="paginator">
+    
+    
+    <a class="next" href="http://localhost:1313/agent/%E9%80%9A%E8%BF%87adk%E8%B0%83%E7%94%A8ai_agent%E4%BB%A5%E5%8F%8A%E5%8E%86%E5%8F%B2%E6%B6%88%E6%81%AF%E7%9A%84%E4%BF%9D%E5%AD%98/"><span>通过ADK调用AI Agent，以及历史消息的保存</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="http://localhost:1313/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="/main.min.cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e.js" integrity="sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP&#43;DGNKHfuwvY7kxvUdBeoGlODJ6&#43;SfaPg==" crossorigin="anonymous" defer></script></html>
