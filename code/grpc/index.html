@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>grpc</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器">
+    <meta name="author" content="EasyImpr/印象简单">
+    <link rel="canonical" href="http://localhost:1313/code/grpc/">
+
+    <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="http://localhost:1313/code/grpc/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="grpc">
+  <meta property="og:description" content="讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="code">
+    <meta property="article:published_time" content="2026-01-14T23:05:19+08:00">
+    <meta property="article:modified_time" content="2026-01-14T23:05:19+08:00">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="http://localhost:1313/code/mongo/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/loopagent%E5%BE%AA%E7%8E%AF%E4%BC%98%E5%8C%96%E4%BB%A3%E7%A0%81/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E9%80%9A%E8%BF%87adk%E8%B0%83%E7%94%A8ai_agent%E4%BB%A5%E5%8F%8A%E5%8E%86%E5%8F%B2%E6%B6%88%E6%81%AF%E7%9A%84%E4%BF%9D%E5%AD%98/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/mcp_go_sdk/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="grpc">
+  <meta name="twitter:description" content="讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Codes",
+      "item": "http://localhost:1313/code/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "grpc",
+      "item": "http://localhost:1313/code/grpc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "grpc",
+  "name": "grpc",
+  "description": "讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器\n",
+  "keywords": [
+    "golang"
+  ],
+  "articleBody": "讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器\ngrpc grpc和http是对等的，都是属于应用层的方面\ngrpc通过protobuffer进行序列化，传输采用多路复用（适用于高并发的场景）\nps:这篇博客我代码的路径写的好烂，观看可能不是很好，但是懒得改了，凑活看吧（\nproto语法与protoc工具 基本语法结构 syntax = \"proto3\"; //采用protubuffer v3版本的语法编写 package idl.student; //包名可以包含.但是不能有. 其他proto引用此proto时需要指定package，对成的go代码没有影响 option go_package = \"idl/student;grpc_student\"; //指定对成的go代码,分号前为go文件生成的路径（相对于go_out）,分号后为包名 message student{//等同于go的结构体，转换为go代码会变成驼峰的形式 string name = 2; //2是字段编号，每个字段编号不能重复，不能为0 int64 id = 1; repeated string hobbies = 3; //repeated表示list，对用go的切片 map\u003cstring,float\u003e scores = 4; //map表示map，对用go的map } 核心概念 语法元素 说明 syntax = \"proto3\" 指定使用 Protocol Buffers v3 版本语法 package 命名空间，用于避免消息类型命名冲突 option 编译器选项，影响代码生成行为 message 定义数据结构，等同于 Go 的 struct repeated 表示数组/切片类型 map 表示字典类型 protoc 编译命令 生成前的目录结构：\nweb/ └── grpcs/ └── student.proto cd /web protoc --go_out=./grpcs --proto_path=. ./grpcs/student.proto 参数 说明 --go_out 指定生成的 Go 代码输出目录 --proto_path 指定 proto 文件搜索目录（可简写为 -I） 生成后的目录结构：\nweb/ ├── grpcs/ │ ├── student.proto │ └── idl/ │ └── student/ │ └── student.pb.go 高级protoc命令选项 场景：导入其他proto文件并生成gRPC服务代码 当我们需要在一个 proto 文件中导入另一个 proto 文件，并生成 gRPC 服务端/客户端代码时，需要使用更多的 protoc 选项。\n目录结构示例 生成前的目录结构：\nweb/ └── grpcs/ ├── student.proto # 基础消息定义 └── idl/ └── service/ └── student_service.proto # 服务定义（import student.proto） proto 文件示例 student.proto (基础消息)：\nsyntax = \"proto3\"; package idl.student; option go_package = \"idl/student;grpc_student\"; message student { string name = 1; int64 id = 2; } student_service.proto (服务定义)：\nsyntax = \"proto3\"; package service.student; option go_package = \"idl/service/student;grpc_service_student\"; import \"grpcs/student.proto\"; // 导入其他 proto 文件 message QueryStudentRequest { int64 Id = 1; string name = 2; } message QueryStudentResponse { repeated idl.student.student Students = 1; // 使用导入的消息类型 } service student { // Unary RPC - 一元调用 rpc QueryStudent(QueryStudentRequest) returns (QueryStudentResponse); // Server streaming RPC - 服务端流式 rpc QueryStudents2(StudentIds) returns (stream idl.student.student); // Client streaming RPC - 客户端流式 rpc QueryStudents3(stream StudentId) returns (QueryStudentResponse); // Bidirectional streaming RPC - 双向流式 rpc QueryStudents4(stream StudentId) returns (stream idl.student.student); } 编译命令 在 web/ 目录下执行：\nprotoc \\ --go_out=./grpcs \\ --go-grpc_out=./grpcs \\ --proto_path=. \\ --go_opt=Mgrpcs/student.proto=goStudy/web/grpcs/idl/student \\ --go-grpc_opt=Mgrpcs/student.proto=goStudy/web/grpcs/idl/student \\ ./grpcs/idl/service/student_service.proto 参数详解 参数 说明 --go_out 指定生成 .pb.go 文件（消息定义）的输出目录，与option分号前组合 --go-grpc_out 指定生成 _grpc.pb.go 文件（gRPC 服务）的输出目录，与option分号前组合 --proto_path proto 文件的搜索根路径，可指定多个。import 语句会基于这些路径查找 --go_opt=M= 修改导入的 proto 文件在生成的 Go 代码中的 import 路径映射 --go-grpc_opt=M= 与 --go_opt 类似，但用于 gRPC 生成器 关键注意事项 proto_path 的作用\nimport \"grpcs/student.proto\" 会在 --proto_path 指定的目录下查找 如果 --proto_path=.，则会在当前目录下查找 ./grpcs/student.proto 路径映射的关键点\nM 后面必须是 proto 文件在 import 中使用的完整路径 ❌ 错误：Mstudent.proto=... （仅文件名） ✅ 正确：Mgrpcs/student.proto=... （import 中的完整路径） Go 模块路径映射\n如果你的 Go 模块名是 goStudy proto 文件的 go_package 是 idl/student 则完整路径应该是：goStudy/web/grpcs/idl/student 生成后的目录结构 web/ └── grpcs/ ├── student.proto └── idl/ ├── student/ │ └── student.pb.go # 消息定义代码 └── service/ ├── student_service.proto └── student/ ├── student_service.pb.go # 消息定义代码 └── student_service_grpc.pb.go # gRPC 服务代码（接口定义） grpc服务端 查看我们刚刚生成的文件\ntype StudentServer interface { // Unary RPC QueryStudent(context.Context, *QueryStudentRequest) (*QueryStudentResponse, error) QueryStudents1(context.Context, *StudentIds) (*QueryStudentResponse, error) // Server streaming RPC QueryStudents2(*StudentIds, grpc.ServerStreamingServer[student.Student]) error // Client streaming RPC QueryStudents3(grpc.ClientStreamingServer[StudentId, QueryStudentResponse]) error // Bidirectional streaming RPC QueryStudents4(grpc.BidiStreamingServer[StudentId, student.Student]) error mustEmbedUnimplementedStudentServer() } 作为服务端，我们需要完成刚刚生成的接口中的函数\nimport ( \"context\" \"fmt\" grpc_service \"goStudy/https/grpcs/idl/service/student\" gprc_model \"goStudy/https/grpcs/idl/student\" ) type Student struct { grpc_service.UnimplementedStudentServer } func (s *Student) QueryStudent(ctx context.Context, req *grpc_service.QueryStudentRequest) (*grpc_service.QueryStudentResponse, error) { fmt.Println(\"QueryStudent\", req) resp := \u0026grpc_service.QueryStudentResponse{ Students: []*gprc_model.Student{ { Name: \"John Doe\", Id: 1, }, }, } return resp, nil } 运行\nimport ( grpc_service \"goStudy/web/grpcs/idl/service/student\" \"log\" \"net\" \"google.golang.org/grpc\" ) func main() { lis, err := net.Listen(\"tcp\", \"127.0.0.1:50051\") if err != nil { log.Fatalf(\"failed to listen: %v\", err) } server := grpc.NewServer() //注册实现 grpc_service.RegisterStudentServer(server, \u0026Student{}) server.Serve(lis) } grpc客户端 这里开了3个协程调用\nimport ( \"context\" \"fmt\" \"log\" grpc_service \"goStudy/https/grpcs/idl/service/student\" \"google.golang.org/grpc\" \"google.golang.org/grpc/credentials/insecure\" ) func main() { coon, err := grpc.NewClient(\"127.0.0.1:50051\", grpc.WithTransportCredentials(insecure.NewCredentials()), //必须加这一行，要不然报错 //可以加一些全局选项 grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024)), //设置最大接收消息大小为1kb grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(1024)), //设置最大发送消息大小为1kb ) if err != nil { log.Fatalf(\"failed to connect: %v\", err) } defer coon.Close() studentClient := grpc_service.NewStudentClient(coon) //开启三个协程，每个协程都调用一次QueryStudent,演示grpc的多路复用 done := make(chan interface{}, 3) for i := 0; i \u003c 3; i++ { go func() { ctx := context.Background() resp, err := studentClient.QueryStudent(ctx, \u0026grpc_service.QueryStudentRequest{ Id: 1, }, //设置其他内容 grpc.MaxCallRecvMsgSize(1024), //设置最大接收消息大小为1kb ) if err != nil { log.Fatalf(\"failed to query student: %v\", err) } fmt.Println(resp) done \u003c- struct{}{} //完成了一个请求 }() } for range 3 { \u003c-done //阻塞，直到收到3个请求完成 } fmt.Println(\"所有请求完成\") } 拦截器 有点类似于中间件\n服务端 func timer(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) { begin := time.Now() resp, err = handler(ctx, req) //指的具体的接口实现 elapsed := time.Since(begin) fmt.Printf(\"method %s took %s\\n\", info.FullMethod, elapsed) return } 之后调用\n这里演示普通的拦截器，其实也可以链式调用拦截器，在客户端演示\nserver := grpc.NewServer( grpc.UnaryInterceptor(timer), ) 客户端 func timer(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error { begin := time.Now() err := invoker(ctx, method, req, reply, cc, opts...) elapsed := time.Since(begin) fmt.Printf(\"method %s took %s\\n\", method, elapsed) return err } 调用\ncoon, err := grpc.NewClient(\"127.0.0.1:50051\", grpc.WithTransportCredentials(insecure.NewCredentials()), //必须加这一行，要不然报错 grpc.WithUnaryInterceptor(timer), //调用拦截器 grpc.WithChainUnaryInterceptor(timer, timer), //链式调用拦截器 ) 因为普通调用拦截器一次，链式调用2次，一共有3个协程，所以将会打印9次耗时日志\nmethod /service.student.student/QueryStudent took 2.682709ms method /service.student.student/QueryStudent took 2.691791ms method /service.student.student/QueryStudent took 2.694834ms method /service.student.student/QueryStudent took 2.671666ms method /service.student.student/QueryStudent took 2.687ms method /service.student.student/QueryStudent took 3.146792ms Students:{name:\"John Doe\" id:1} Students:{name:\"John Doe\" id:1} method /service.student.student/QueryStudent took 2.518333ms method /service.student.student/QueryStudent took 2.549041ms method /service.student.student/QueryStudent took 2.553334ms Students:{name:\"John Doe\" id:1} 所有请求完成 ",
+  "wordCount" : "734",
+  "inLanguage": "zh",
+  "datePublished": "2026-01-14T23:05:19+08:00",
+  "dateModified": "2026-01-14T23:05:19+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "EasyImpr/印象简单"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://localhost:1313/code/grpc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://localhost:1313/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    </head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>grpc</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年1月14日&nbsp;· 734 字&nbsp;· 4 分钟</small>
+
+  
+<p>
+
+  <div class="blog-toc">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#proto语法与protoc工具">proto语法与protoc工具</a>
+      <ul>
+        <li><a href="#基本语法结构">基本语法结构</a></li>
+        <li><a href="#核心概念">核心概念</a></li>
+        <li><a href="#protoc-编译命令">protoc 编译命令</a></li>
+      </ul>
+    </li>
+    <li><a href="#高级protoc命令选项">高级protoc命令选项</a>
+      <ul>
+        <li><a href="#场景导入其他proto文件并生成grpc服务代码">场景：导入其他proto文件并生成gRPC服务代码</a></li>
+      </ul>
+    </li>
+    <li><a href="#grpc服务端">grpc服务端</a></li>
+    <li><a href="#grpc客户端">grpc客户端</a></li>
+    <li><a href="#拦截器">拦截器</a>
+      <ul>
+        <li><a href="#服务端">服务端</a></li>
+        <li><a href="#客户端">客户端</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+
+  <section class="blog-content"><p>讲解了grpc的简单实用，包括protoc，以及grpc的客户端，服务端，拦截器</p>
+<h1 id="grpc">grpc</h1>
+<p>grpc和http是对等的，都是属于应用层的方面</p>
+<p>grpc通过protobuffer进行序列化，传输采用多路复用（适用于高并发的场景）</p>
+<p>ps:这篇博客我代码的路径写的好烂，观看可能不是很好，但是懒得改了，凑活看吧（</p>
+<h2 id="proto语法与protoc工具">proto语法与protoc工具</h2>
+<h3 id="基本语法结构">基本语法结构</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-protobuf" data-lang="protobuf"><span style="display:flex;"><span>syntax <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;proto3&#34;</span>; <span style="color:#75715e">//采用protubuffer v3版本的语法编写
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672">package</span> idl<span style="color:#f92672">.</span>student; <span style="color:#75715e">//包名可以包含.但是不能有.  其他proto引用此proto时需要指定package，对成的go代码没有影响
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">option</span> go_package <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;idl/student;grpc_student&#34;</span>; <span style="color:#75715e">//指定对成的go代码,分号前为go文件生成的路径（相对于go_out）,分号后为包名
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">student</span>{<span style="color:#75715e">//等同于go的结构体，转换为go代码会变成驼峰的形式
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">string</span> name <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>; <span style="color:#75715e">//2是字段编号，每个字段编号不能重复，不能为0
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int64</span> id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">repeated</span> <span style="color:#66d9ef">string</span> hobbies <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>; <span style="color:#75715e">//repeated表示list，对用go的切片
+</span></span></span><span style="display:flex;"><span>    map&lt;<span style="color:#66d9ef">string</span>,<span style="color:#66d9ef">float</span>&gt; scores <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>; <span style="color:#75715e">//map表示map，对用go的map
+</span></span></span><span style="display:flex;"><span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><h3 id="核心概念">核心概念</h3>
+<table>
+  <thead>
+      <tr>
+          <th>语法元素</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>syntax = &quot;proto3&quot;</code></td>
+          <td>指定使用 Protocol Buffers v3 版本语法</td>
+      </tr>
+      <tr>
+          <td><code>package</code></td>
+          <td>命名空间，用于避免消息类型命名冲突</td>
+      </tr>
+      <tr>
+          <td><code>option</code></td>
+          <td>编译器选项，影响代码生成行为</td>
+      </tr>
+      <tr>
+          <td><code>message</code></td>
+          <td>定义数据结构，等同于 Go 的 struct</td>
+      </tr>
+      <tr>
+          <td><code>repeated</code></td>
+          <td>表示数组/切片类型</td>
+      </tr>
+      <tr>
+          <td><code>map</code></td>
+          <td>表示字典类型</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="protoc-编译命令">protoc 编译命令</h3>
+<p>生成前的目录结构：</p>
+<pre tabindex="0"><code>web/
+└── grpcs/
+    └── student.proto
+</code></pre><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd /web
+</span></span><span style="display:flex;"><span>protoc --go_out<span style="color:#f92672">=</span>./grpcs --proto_path<span style="color:#f92672">=</span>. ./grpcs/student.proto
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>参数</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>--go_out</code></td>
+          <td>指定生成的 Go 代码输出目录</td>
+      </tr>
+      <tr>
+          <td><code>--proto_path</code></td>
+          <td>指定 proto 文件搜索目录（可简写为 -I）</td>
+      </tr>
+  </tbody>
+</table>
+<p>生成后的目录结构：</p>
+<pre tabindex="0"><code>web/
+├── grpcs/
+│   ├── student.proto
+│   └── idl/
+│       └── student/
+│           └── student.pb.go
+</code></pre><h2 id="高级protoc命令选项">高级protoc命令选项</h2>
+<h3 id="场景导入其他proto文件并生成grpc服务代码">场景：导入其他proto文件并生成gRPC服务代码</h3>
+<p>当我们需要在一个 proto 文件中导入另一个 proto 文件，并生成 gRPC 服务端/客户端代码时，需要使用更多的 protoc 选项。</p>
+<h4 id="目录结构示例">目录结构示例</h4>
+<p>生成前的目录结构：</p>
+<pre tabindex="0"><code>web/
+└── grpcs/
+    ├── student.proto                          # 基础消息定义
+    └── idl/
+        └── service/
+            └── student_service.proto          # 服务定义（import student.proto）
+</code></pre><h4 id="proto-文件示例">proto 文件示例</h4>
+<p><strong>student.proto</strong> (基础消息)：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-protobuf" data-lang="protobuf"><span style="display:flex;"><span>syntax <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;proto3&#34;</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672">package</span> idl<span style="color:#f92672">.</span>student;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">option</span> go_package <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;idl/student;grpc_student&#34;</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">student</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">string</span> name <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int64</span> id <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><p><strong>student_service.proto</strong> (服务定义)：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-protobuf" data-lang="protobuf"><span style="display:flex;"><span>syntax <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;proto3&#34;</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672">package</span> service<span style="color:#f92672">.</span>student;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">option</span> go_package <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;idl/service/student;grpc_service_student&#34;</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> <span style="color:#e6db74">&#34;grpcs/student.proto&#34;</span>;  <span style="color:#75715e">// 导入其他 proto 文件
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">QueryStudentRequest</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int64</span> Id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">string</span> name <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">QueryStudentResponse</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">repeated</span> idl.student.student Students <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// 使用导入的消息类型
+</span></span></span><span style="display:flex;"><span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">service</span> student {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Unary RPC - 一元调用
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">rpc</span> QueryStudent(QueryStudentRequest) <span style="color:#66d9ef">returns</span> (QueryStudentResponse);<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Server streaming RPC - 服务端流式
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">rpc</span> QueryStudents2(StudentIds) <span style="color:#66d9ef">returns</span> (stream idl.student.student);<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Client streaming RPC - 客户端流式
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">rpc</span> QueryStudents3(stream StudentId) <span style="color:#66d9ef">returns</span> (QueryStudentResponse);<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Bidirectional streaming RPC - 双向流式
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">rpc</span> QueryStudents4(stream StudentId) <span style="color:#66d9ef">returns</span> (stream idl.student.student);<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><h4 id="编译命令">编译命令</h4>
+<p>在 <code>web/</code> 目录下执行：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>protoc <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --go_out<span style="color:#f92672">=</span>./grpcs <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --go-grpc_out<span style="color:#f92672">=</span>./grpcs <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --proto_path<span style="color:#f92672">=</span>. <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --go_opt<span style="color:#f92672">=</span>Mgrpcs/student.proto<span style="color:#f92672">=</span>goStudy/web/grpcs/idl/student <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --go-grpc_opt<span style="color:#f92672">=</span>Mgrpcs/student.proto<span style="color:#f92672">=</span>goStudy/web/grpcs/idl/student <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  ./grpcs/idl/service/student_service.proto
+</span></span></code></pre></div><h4 id="参数详解">参数详解</h4>
+<table>
+  <thead>
+      <tr>
+          <th>参数</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>--go_out</code></td>
+          <td>指定生成 <code>.pb.go</code> 文件（消息定义）的输出目录，与option分号前组合</td>
+      </tr>
+      <tr>
+          <td><code>--go-grpc_out</code></td>
+          <td>指定生成 <code>_grpc.pb.go</code> 文件（gRPC 服务）的输出目录，与option分号前组合</td>
+      </tr>
+      <tr>
+          <td><code>--proto_path</code></td>
+          <td>proto 文件的搜索根路径，可指定多个。import 语句会基于这些路径查找</td>
+      </tr>
+      <tr>
+          <td><code>--go_opt=M&lt;proto路径&gt;=&lt;Go模块路径&gt;</code></td>
+          <td>修改导入的 proto 文件在生成的 Go 代码中的 import 路径映射</td>
+      </tr>
+      <tr>
+          <td><code>--go-grpc_opt=M&lt;proto路径&gt;=&lt;Go模块路径&gt;</code></td>
+          <td>与 <code>--go_opt</code> 类似，但用于 gRPC 生成器</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="关键注意事项">关键注意事项</h4>
+<ol>
+<li>
+<p><strong>proto_path 的作用</strong></p>
+<ul>
+<li><code>import &quot;grpcs/student.proto&quot;</code> 会在 <code>--proto_path</code> 指定的目录下查找</li>
+<li>如果 <code>--proto_path=.</code>，则会在当前目录下查找 <code>./grpcs/student.proto</code></li>
+</ul>
+</li>
+<li>
+<p><strong>路径映射的关键点</strong></p>
+<ul>
+<li><code>M</code> 后面必须是 proto 文件在 import 中使用的<strong>完整路径</strong></li>
+<li>❌ 错误：<code>Mstudent.proto=...</code> （仅文件名）</li>
+<li>✅ 正确：<code>Mgrpcs/student.proto=...</code> （import 中的完整路径）</li>
+</ul>
+</li>
+<li>
+<p><strong>Go 模块路径映射</strong></p>
+<ul>
+<li>如果你的 Go 模块名是 <code>goStudy</code></li>
+<li>proto 文件的 <code>go_package</code> 是 <code>idl/student</code></li>
+<li>则完整路径应该是：<code>goStudy/web/grpcs/idl/student</code></li>
+</ul>
+</li>
+</ol>
+<h4 id="生成后的目录结构">生成后的目录结构</h4>
+<pre tabindex="0"><code>web/
+└── grpcs/
+    ├── student.proto
+    └── idl/
+        ├── student/
+        │   └── student.pb.go                  # 消息定义代码
+        └── service/
+            ├── student_service.proto
+            └── student/
+                ├── student_service.pb.go       # 消息定义代码
+                └── student_service_grpc.pb.go  # gRPC 服务代码（接口定义）
+</code></pre><h2 id="grpc服务端">grpc服务端</h2>
+<p>查看我们刚刚生成的文件</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">StudentServer</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Unary RPC</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">QueryStudent</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStudentRequest</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStudentResponse</span>, <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">QueryStudents1</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">StudentIds</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStudentResponse</span>, <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Server streaming RPC</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">QueryStudents2</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">StudentIds</span>, <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">ServerStreamingServer</span>[<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">Student</span>]) <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Client streaming RPC</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">QueryStudents3</span>(<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">ClientStreamingServer</span>[<span style="color:#a6e22e">StudentId</span>, <span style="color:#a6e22e">QueryStudentResponse</span>]) <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Bidirectional streaming RPC</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">QueryStudents4</span>(<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">BidiStreamingServer</span>[<span style="color:#a6e22e">StudentId</span>, <span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">Student</span>]) <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mustEmbedUnimplementedStudentServer</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>作为服务端，我们需要完成刚刚生成的接口中的函数</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">grpc_service</span> <span style="color:#e6db74">&#34;goStudy/https/grpcs/idl/service/student&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">gprc_model</span> <span style="color:#e6db74">&#34;goStudy/https/grpcs/idl/student&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Student</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">UnimplementedStudentServer</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Student</span>) <span style="color:#a6e22e">QueryStudent</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">QueryStudentRequest</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">QueryStudentResponse</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;QueryStudent&#34;</span>, <span style="color:#a6e22e">req</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">resp</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">QueryStudentResponse</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Students</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">gprc_model</span>.<span style="color:#a6e22e">Student</span>{
+</span></span><span style="display:flex;"><span>			{
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">Name</span>: <span style="color:#e6db74">&#34;John Doe&#34;</span>,
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">Id</span>:   <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">resp</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>运行</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">grpc_service</span> <span style="color:#e6db74">&#34;goStudy/web/grpcs/idl/service/student&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;net&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;google.golang.org/grpc&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">lis</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;127.0.0.1:50051&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;failed to listen: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">server</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">NewServer</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//注册实现</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">RegisterStudentServer</span>(<span style="color:#a6e22e">server</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Student</span>{})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">server</span>.<span style="color:#a6e22e">Serve</span>(<span style="color:#a6e22e">lis</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="grpc客户端">grpc客户端</h2>
+<p>这里开了3个协程调用</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">grpc_service</span> <span style="color:#e6db74">&#34;goStudy/https/grpcs/idl/service/student&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;google.golang.org/grpc&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;google.golang.org/grpc/credentials/insecure&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">coon</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#e6db74">&#34;127.0.0.1:50051&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithTransportCredentials</span>(<span style="color:#a6e22e">insecure</span>.<span style="color:#a6e22e">NewCredentials</span>()), <span style="color:#75715e">//必须加这一行，要不然报错</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">//可以加一些全局选项</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithDefaultCallOptions</span>(<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">MaxCallRecvMsgSize</span>(<span style="color:#ae81ff">1024</span>)), <span style="color:#75715e">//设置最大接收消息大小为1kb</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithDefaultCallOptions</span>(<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">MaxCallSendMsgSize</span>(<span style="color:#ae81ff">1024</span>)), <span style="color:#75715e">//设置最大发送消息大小为1kb</span>
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;failed to connect: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">coon</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">studentClient</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">NewStudentClient</span>(<span style="color:#a6e22e">coon</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//开启三个协程，每个协程都调用一次QueryStudent,演示grpc的多路复用</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">done</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">interface</span>{}, <span style="color:#ae81ff">3</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">3</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">studentClient</span>.<span style="color:#a6e22e">QueryStudent</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">grpc_service</span>.<span style="color:#a6e22e">QueryStudentRequest</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">Id</span>: <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">//设置其他内容</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">MaxCallRecvMsgSize</span>(<span style="color:#ae81ff">1024</span>), <span style="color:#75715e">//设置最大接收消息大小为1kb</span>
+</span></span><span style="display:flex;"><span>			)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;failed to query student: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">done</span> <span style="color:#f92672">&lt;-</span> <span style="color:#66d9ef">struct</span>{}{} <span style="color:#75715e">//完成了一个请求</span>
+</span></span><span style="display:flex;"><span>		}()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#66d9ef">range</span> <span style="color:#ae81ff">3</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">done</span> <span style="color:#75715e">//阻塞，直到收到3个请求完成</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;所有请求完成&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="拦截器">拦截器</h2>
+<p>有点类似于中间件</p>
+<h3 id="服务端">服务端</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">timer</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#66d9ef">any</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryServerInfo</span>, <span style="color:#a6e22e">handler</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryHandler</span>) (<span style="color:#a6e22e">resp</span> <span style="color:#66d9ef">any</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">begin</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">handler</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">req</span>) <span style="color:#75715e">//指的具体的接口实现</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">elapsed</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Since</span>(<span style="color:#a6e22e">begin</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;method %s took %s\n&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">FullMethod</span>, <span style="color:#a6e22e">elapsed</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>之后调用</p>
+<p>这里演示普通的拦截器，其实也可以链式调用拦截器，在客户端演示</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#a6e22e">server</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">NewServer</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryInterceptor</span>(<span style="color:#a6e22e">timer</span>),
+</span></span><span style="display:flex;"><span>	)
+</span></span></code></pre></div><h3 id="客户端">客户端</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">timer</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">method</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">reply</span> <span style="color:#66d9ef">any</span>, <span style="color:#a6e22e">cc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">ClientConn</span>, <span style="color:#a6e22e">invoker</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryInvoker</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">CallOption</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">begin</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">invoker</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">method</span>, <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">reply</span>, <span style="color:#a6e22e">cc</span>, <span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">elapsed</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Since</span>(<span style="color:#a6e22e">begin</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;method %s took %s\n&#34;</span>, <span style="color:#a6e22e">method</span>, <span style="color:#a6e22e">elapsed</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>调用</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#a6e22e">coon</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#e6db74">&#34;127.0.0.1:50051&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithTransportCredentials</span>(<span style="color:#a6e22e">insecure</span>.<span style="color:#a6e22e">NewCredentials</span>()), <span style="color:#75715e">//必须加这一行，要不然报错</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithUnaryInterceptor</span>(<span style="color:#a6e22e">timer</span>),                           <span style="color:#75715e">//调用拦截器</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithChainUnaryInterceptor</span>(<span style="color:#a6e22e">timer</span>, <span style="color:#a6e22e">timer</span>),               <span style="color:#75715e">//链式调用拦截器</span>
+</span></span><span style="display:flex;"><span>	)
+</span></span></code></pre></div><p>因为普通调用拦截器一次，链式调用2次，一共有3个协程，所以将会打印9次耗时日志</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.682709ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.691791ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.694834ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.671666ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.687ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 3.146792ms
+</span></span><span style="display:flex;"><span>Students:<span style="color:#f92672">{</span>name:<span style="color:#e6db74">&#34;John Doe&#34;</span>  id:1<span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>Students:<span style="color:#f92672">{</span>name:<span style="color:#e6db74">&#34;John Doe&#34;</span>  id:1<span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.518333ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.549041ms
+</span></span><span style="display:flex;"><span>method /service.student.student/QueryStudent took 2.553334ms
+</span></span><span style="display:flex;"><span>Students:<span style="color:#f92672">{</span>name:<span style="color:#e6db74">&#34;John Doe&#34;</span>  id:1<span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>所有请求完成
+</span></span></code></pre></div></section>
+
+  
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="http://localhost:1313/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="/main.min.cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e.js" integrity="sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP&#43;DGNKHfuwvY7kxvUdBeoGlODJ6&#43;SfaPg==" crossorigin="anonymous" defer></script></html>
