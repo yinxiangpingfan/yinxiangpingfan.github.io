@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@介绍了mongoDB的基本语法，以及在go中操作mongoDB">
+    <meta name="author" content="EasyImpr/印象简单">
+    <link rel="canonical" href="http://localhost:1313/code/mongo/">
+
+    <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="http://localhost:1313/code/mongo/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="MongoDB">
+  <meta property="og:description" content="介绍了mongoDB的基本语法，以及在go中操作mongoDB">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="code">
+    <meta property="article:published_time" content="2026-01-14T11:54:35+08:00">
+    <meta property="article:modified_time" content="2026-01-14T11:54:35+08:00">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="http://localhost:1313/agent/loopagent%E5%BE%AA%E7%8E%AF%E4%BC%98%E5%8C%96%E4%BB%A3%E7%A0%81/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E6%B5%81%E7%A8%8B%E7%9A%84%E4%B8%AD%E6%96%AD%E4%B8%8E%E5%9B%9E%E5%A4%8D/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E9%80%9A%E8%BF%87adk%E8%B0%83%E7%94%A8ai_agent%E4%BB%A5%E5%8F%8A%E5%8E%86%E5%8F%B2%E6%B6%88%E6%81%AF%E7%9A%84%E4%BF%9D%E5%AD%98/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%9C%A8eino%E9%87%8C%E8%B0%83%E7%94%A8mcp%E5%B7%A5%E5%85%B7/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/mcp_go_sdk/">
+      <meta property="og:see_also" content="http://localhost:1313/agent/%E5%A4%A9%E6%B0%94%E9%A2%84%E6%8A%A5%E5%B7%A5%E5%85%B7/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MongoDB">
+  <meta name="twitter:description" content="介绍了mongoDB的基本语法，以及在go中操作mongoDB">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Codes",
+      "item": "http://localhost:1313/code/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "MongoDB",
+      "item": "http://localhost:1313/code/mongo/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "MongoDB",
+  "name": "MongoDB",
+  "description": "介绍了mongoDB的基本语法，以及在go中操作mongoDB\n",
+  "keywords": [
+    "golang"
+  ],
+  "articleBody": "介绍了mongoDB的基本语法，以及在go中操作mongoDB\nMongoDB 一、MongoDB 是什么 MongoDB 是典型的 文档型数据库（Document DB），数据以 BSON（类似 JSON）形式存储。它的核心优势是：\n结构灵活：同一个集合里，不同文档字段可以不同（你后面插入“张三/李四”就是典型例子）。 开发效率高：对象结构和 JSON 很接近，适合快速迭代。 横向扩展能力强：天然适合分片、复制集等分布式方案（适合海量数据与高并发）。 二、MongoDB 典型应用场景 1）内容/信息流类（字段经常变、迭代快） 比如：博客文章、评论、点赞、标签、用户行为记录。 特点：字段可能不断新增（阅读量、推荐权重、AB实验分组……），MongoDB 的“无固定表结构”很省事。\n2）日志与埋点数据（写多读少、数据量大） 如：访问日志、系统日志、业务埋点。 MongoDB 写入性能好，配合索引和分片可承载较大吞吐。\n3）用户画像/配置中心（每个人字段不一样） 如：用户偏好、标签、权限、个性化配置。 不同用户属性差异大，用关系型表会变成“稀疏列/多表拆分”，MongoDB 反而自然。\n4）原型验证与快速开发 项目早期需求不稳定，MongoDB 可以让你先把功能跑通，再逐步优化模型。\n不太建议：强事务、强一致、多表复杂 JOIN 的场景（虽然 MongoDB 支持事务，但复杂关联依旧不是它的强项）。\n三、MongoDB 基本语法 1）查看集合 test\u003e show collections 作用：列出当前数据库 test 下所有集合（类似 MySQL 的 show tables）。\n2）创建集合 test\u003e db.createCollection(\"student\") { ok: 1 } db.createCollection(\"student\")：显式创建集合 student。 MongoDB 其实也支持 隐式创建：当你第一次向 student 插入数据时，如果集合不存在，也会自动创建。\n验证：\ntest\u003e show collections student 3）创建索引：你遇到的坑 MongoDB 的 createIndex() 参数里：\n第一个参数是 key（字段与排序方向） 第二个参数才是 options（例如 unique） db.student.createIndex({ name: 1 }, { unique: true }) 4）查看索引 test\u003e db.student.getIndexes() [ { v: 2, key: { _id: 1 }, name: '_id_' }, { v: 2, key: { name: 1 }, name: 'name_1', unique: true } ] 解释：\nMongoDB 默认每个集合都有 _id_ 索引（主键）。 5）删除索引 test\u003e db.student.dropIndex(\"name_1\") { nIndexesWas: 2, ok: 1 } 删除指定名字的索引（索引名来自 createIndex 返回值）。\n再查：\ntest\u003e db.student.getIndexes() [ { v: 2, key: { _id: 1 }, name: '_id_' } ] 只剩默认 _id_。\n6）重新创建一个普通索引 test\u003e db.student.createIndex({name:1}) name_1 单字段升序索引：对 name 的查询会更快，例如 find({name:\"张三\"})。\n四、插入数据 insert 1）插入一条 db.student.insertOne({name:\"张三\",city:\"北京\"}) 返回 insertedId，MongoDB 自动生成 _id（ObjectId）。\n2）查询全部 db.student.find() 你看到集合里有一条文档。\n3）批量插入 db.student.insertMany([{name:\"张三\",city:\"北京\"},{name:\"李四\",gender:\"男\"}]) 特点：\n同一个集合里，第二条文档没有 city，却有 gender —— 这就是 MongoDB 的“字段灵活”。 五、查询 find（带条件） db.student.find({name:\"张三\"}) 返回所有 name=\"张三\" 的文档。 这个查询会受益于你之前建的 name_1 索引。\n六、更新 update 1）更新一条 updateOne db.student.updateOne({name:\"张三\"},{$set:{gender:\"女\"}}) 解释：\n{name:\"张三\"}：过滤条件（匹配第一条符合条件的文档） {$set:{gender:\"女\"}}：更新操作符（只改 gender 字段，不会覆盖整个文档） 返回值里：\nmatchedCount: 1：匹配到 1 条 modifiedCount: 1：实际修改 1 条 再查：\ndb.student.find({name:\"张三\"}) 你会发现：只有其中一个张三有 gender 字段。\n2）更新多条 updateMany db.student.updateMany({name:\"张三\"},{$set:{city:\"上海\"}}) 匹配到的两条张三都被更新为 city:\"上海\"。\n七、删除 delete 1）删除一条 deleteOne db.student.deleteOne({name:\"张三\"}) 只删第一条匹配到的张三。\n2）删除多条 deleteMany db.student.deleteMany({name:\"张三\"}) 删除所有匹配到的张三。\n八、删除集合 drop db.student.drop() true 删除整个集合（数据 + 索引都会没）。\n验证：\nshow collections student 不见了。\n九、总结 show collections：查看集合 db.createCollection()：创建集合（也可插入时自动创建） createIndex / getIndexes / dropIndex：索引管理（注意 unique 是 options，不是 key） insertOne / insertMany：插入 find(条件)：查询 updateOne / updateMany + $set：更新 deleteOne / deleteMany：删除 drop()：删集合 go操作mongoDB 连接mongoDB func MongoDBInit() { ctx := context.Background() option := options.Client().ApplyURI(\"mongodb://localhost:27017\"). SetConnectTimeout(time.Second). //设置超时时长 SetAuth(options.Credential{ //AuthSource代表Database Username: \"\", Password: \"\", AuthSource: \"test\", }) client, err := mongo.Connect(ctx, option) if err != nil { log.Fatal(err) } //Connect没有返回error不代表连接成功，ping一下检查是否连接成功 err = client.Ping(ctx, nil) if err != nil { log.Fatal(err) } defer client.Disconnect(ctx) //释放连接 collection := client.Database(\"test\").Collection(\"student\") //增 create(ctx, collection) //改 update(ctx, collection) //删 delete(ctx, collection) //查 find(ctx, collection) } 增 type Student struct { Name string City string Score float32 } func create(ctx context.Context, collection *mongo.Collection) { //插入一个doc student := Student{ Name: \"张三\", City: \"北京\", Score: 85.5, } res, err := collection.InsertOne(ctx, student) if err != nil { log.Fatal(err) } fmt.Println(\"插入成功\", res.InsertedID) //每个doc都会有一个全世界唯一的ID（时间+空间唯一） //插入多个docs docs := []interface{}{Student{Name: \"李四\", City: \"北京\", Score: 24}, Student{Name: \"王五\", City: \"南京\", Score: 21}} manyRes, err := collection.InsertMany(ctx, docs) if err != nil { log.Fatal(err) } fmt.Println(\"插入多个doc成功\", manyRes.InsertedIDs) } 删 func delete(ctx context.Context, collection *mongo.Collection) { //删除一个doc filter := bson.D{{Key: \"name\", Value: \"张三\"}} //切片过滤条件可以有多个 res, err := collection.DeleteMany(ctx, filter) if err != nil { log.Fatal(err) } fmt.Println(\"删除成功\", res.DeletedCount) } 改 func update(ctx context.Context, collection *mongo.Collection) { //更新一个doc filter := bson.D{{Key: \"city\", Value: \"北京\"}} //切片过滤条件可以有多个 //把满足在北京的学生，score加上5 update := bson.D{{Key: \"$inc\", Value: bson.D{{Key: \"score\", Value: 5}}}} //切片更新条件可以有多个 res, err := collection.UpdateMany(ctx, filter, update) if err != nil { log.Fatal(err) } //打印修改了多少条记录 fmt.Println(\"更新成功\", res.ModifiedCount) } 查 func find(ctx context.Context, collection *mongo.Collection) { //查询一个doc sort := bson.D{{Key: \"name\", Value: 1}} //查询结果按name进行排序。1代表升序，-1代表降序 //gt代表greater than filter := bson.D{{Key: \"score\", Value: bson.D{{Key: \"$gt\", Value: 3}}}} //查询结果按score大于3进行过滤 //切片过滤条件可以有多个 findOptions := options.Find() findOptions.SetSort(sort) findOptions.SetLimit(10) //限制查询结果最多10条 findOptions.SetSkip(3) //跳过前3个 cursor, err := collection.Find(ctx, filter, findOptions) if err != nil { log.Fatal(err) } defer cursor.Close(ctx) //关闭迭代器 for cursor.Next(ctx) { var student Student if err = cursor.Decode(\u0026student); err != nil { log.Fatal(err) } fmt.Println(\"查询成功\", student.Name, student.City, student.Score) } } ",
+  "wordCount" : "552",
+  "inLanguage": "zh",
+  "datePublished": "2026-01-14T11:54:35+08:00",
+  "dateModified": "2026-01-14T11:54:35+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "EasyImpr/印象简单"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://localhost:1313/code/mongo/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://localhost:1313/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    </head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>MongoDB</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年1月14日&nbsp;· 552 字&nbsp;· 3 分钟</small>
+
+  
+<p>
+
+  <div class="blog-toc">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#一mongodb-是什么">一、MongoDB 是什么</a></li>
+    <li><a href="#二mongodb-典型应用场景">二、MongoDB 典型应用场景</a>
+      <ul>
+        <li><a href="#1内容信息流类字段经常变迭代快">1）内容/信息流类（字段经常变、迭代快）</a></li>
+        <li><a href="#2日志与埋点数据写多读少数据量大">2）日志与埋点数据（写多读少、数据量大）</a></li>
+        <li><a href="#3用户画像配置中心每个人字段不一样">3）用户画像/配置中心（每个人字段不一样）</a></li>
+        <li><a href="#4原型验证与快速开发">4）原型验证与快速开发</a></li>
+      </ul>
+    </li>
+    <li><a href="#三mongodb-基本语法">三、MongoDB 基本语法</a>
+      <ul>
+        <li><a href="#1查看集合">1）查看集合</a></li>
+        <li><a href="#2创建集合">2）创建集合</a></li>
+        <li><a href="#3创建索引你遇到的坑">3）创建索引：你遇到的坑</a></li>
+        <li><a href="#4查看索引">4）查看索引</a></li>
+        <li><a href="#5删除索引">5）删除索引</a></li>
+        <li><a href="#6重新创建一个普通索引">6）重新创建一个普通索引</a></li>
+      </ul>
+    </li>
+    <li><a href="#四插入数据-insert">四、插入数据 insert</a>
+      <ul>
+        <li><a href="#1插入一条">1）插入一条</a></li>
+        <li><a href="#2查询全部">2）查询全部</a></li>
+        <li><a href="#3批量插入">3）批量插入</a></li>
+      </ul>
+    </li>
+    <li><a href="#五查询-find带条件">五、查询 find（带条件）</a></li>
+    <li><a href="#六更新-update">六、更新 update</a>
+      <ul>
+        <li><a href="#1更新一条-updateone">1）更新一条 updateOne</a></li>
+        <li><a href="#2更新多条-updatemany">2）更新多条 updateMany</a></li>
+      </ul>
+    </li>
+    <li><a href="#七删除-delete">七、删除 delete</a>
+      <ul>
+        <li><a href="#1删除一条-deleteone">1）删除一条 deleteOne</a></li>
+        <li><a href="#2删除多条-deletemany">2）删除多条 deleteMany</a></li>
+      </ul>
+    </li>
+    <li><a href="#八删除集合-drop">八、删除集合 drop</a></li>
+    <li><a href="#九总结">九、总结</a></li>
+    <li><a href="#go操作mongodb">go操作mongoDB</a>
+      <ul>
+        <li><a href="#连接mongodb">连接mongoDB</a></li>
+        <li><a href="#增">增</a></li>
+        <li><a href="#删">删</a></li>
+        <li><a href="#改">改</a></li>
+        <li><a href="#查">查</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+
+  <section class="blog-content"><p>介绍了mongoDB的基本语法，以及在go中操作mongoDB</p>
+<h1 id="mongodb">MongoDB</h1>
+<h2 id="一mongodb-是什么">一、MongoDB 是什么</h2>
+<p>MongoDB 是典型的 <strong>文档型数据库（Document DB）</strong>，数据以 BSON（类似 JSON）形式存储。它的核心优势是：</p>
+<ul>
+<li><strong>结构灵活</strong>：同一个集合里，不同文档字段可以不同（你后面插入“张三/李四”就是典型例子）。</li>
+<li><strong>开发效率高</strong>：对象结构和 JSON 很接近，适合快速迭代。</li>
+<li><strong>横向扩展能力强</strong>：天然适合分片、复制集等分布式方案（适合海量数据与高并发）。</li>
+</ul>
+<hr>
+<h2 id="二mongodb-典型应用场景">二、MongoDB 典型应用场景</h2>
+<h3 id="1内容信息流类字段经常变迭代快">1）内容/信息流类（字段经常变、迭代快）</h3>
+<p>比如：博客文章、评论、点赞、标签、用户行为记录。
+特点：字段可能不断新增（阅读量、推荐权重、AB实验分组……），MongoDB 的“无固定表结构”很省事。</p>
+<h3 id="2日志与埋点数据写多读少数据量大">2）日志与埋点数据（写多读少、数据量大）</h3>
+<p>如：访问日志、系统日志、业务埋点。
+MongoDB 写入性能好，配合索引和分片可承载较大吞吐。</p>
+<h3 id="3用户画像配置中心每个人字段不一样">3）用户画像/配置中心（每个人字段不一样）</h3>
+<p>如：用户偏好、标签、权限、个性化配置。
+不同用户属性差异大，用关系型表会变成“稀疏列/多表拆分”，MongoDB 反而自然。</p>
+<h3 id="4原型验证与快速开发">4）原型验证与快速开发</h3>
+<p>项目早期需求不稳定，MongoDB 可以让你先把功能跑通，再逐步优化模型。</p>
+<blockquote>
+<p>不太建议：强事务、强一致、多表复杂 JOIN 的场景（虽然 MongoDB 支持事务，但复杂关联依旧不是它的强项）。</p>
+</blockquote>
+<hr>
+<h2 id="三mongodb-基本语法">三、MongoDB 基本语法</h2>
+<hr>
+<h3 id="1查看集合">1）查看集合</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">show</span> <span style="color:#a6e22e">collections</span>
+</span></span></code></pre></div><p>作用：列出当前数据库 <code>test</code> 下所有集合（类似 MySQL 的 show tables）。</p>
+<hr>
+<h3 id="2创建集合">2）创建集合</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">createCollection</span>(<span style="color:#e6db74">&#34;student&#34;</span>)
+</span></span><span style="display:flex;"><span>{ <span style="color:#a6e22e">ok</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }
+</span></span></code></pre></div><p><code>db.createCollection(&quot;student&quot;)</code>：显式创建集合 <code>student</code>。
+MongoDB 其实也支持 <strong>隐式创建</strong>：当你第一次向 <code>student</code> 插入数据时，如果集合不存在，也会自动创建。</p>
+<p>验证：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">show</span> <span style="color:#a6e22e">collections</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">student</span>
+</span></span></code></pre></div><hr>
+<h3 id="3创建索引你遇到的坑">3）创建索引：你遇到的坑</h3>
+<p>MongoDB 的 <code>createIndex()</code> 参数里：</p>
+<ul>
+<li>第一个参数是 <strong>key</strong>（字段与排序方向）</li>
+<li>第二个参数才是 <strong>options</strong>（例如 unique）</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">createIndex</span>({ <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }, { <span style="color:#a6e22e">unique</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span> })
+</span></span></code></pre></div><hr>
+<h3 id="4查看索引">4）查看索引</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">getIndexes</span>()
+</span></span><span style="display:flex;"><span>[
+</span></span><span style="display:flex;"><span>  { <span style="color:#a6e22e">v</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">key</span><span style="color:#f92672">:</span> { <span style="color:#a6e22e">_id</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }, <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;_id_&#39;</span> },
+</span></span><span style="display:flex;"><span>  { <span style="color:#a6e22e">v</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">key</span><span style="color:#f92672">:</span> { <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }, <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;name_1&#39;</span>, <span style="color:#a6e22e">unique</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span> }
+</span></span><span style="display:flex;"><span>]
+</span></span></code></pre></div><p>解释：</p>
+<ul>
+<li>MongoDB 默认每个集合都有 <code>_id_</code> 索引（主键）。</li>
+</ul>
+<hr>
+<h3 id="5删除索引">5）删除索引</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">dropIndex</span>(<span style="color:#e6db74">&#34;name_1&#34;</span>)
+</span></span><span style="display:flex;"><span>{ <span style="color:#a6e22e">nIndexesWas</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">ok</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }
+</span></span></code></pre></div><p>删除指定名字的索引（索引名来自 createIndex 返回值）。</p>
+<p>再查：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">getIndexes</span>()
+</span></span><span style="display:flex;"><span>[ { <span style="color:#a6e22e">v</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">key</span><span style="color:#f92672">:</span> { <span style="color:#a6e22e">_id</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span> }, <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;_id_&#39;</span> } ]
+</span></span></code></pre></div><p>只剩默认 <code>_id_</code>。</p>
+<hr>
+<h3 id="6重新创建一个普通索引">6）重新创建一个普通索引</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">createIndex</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>})
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">name_1</span>
+</span></span></code></pre></div><p>单字段升序索引：对 <code>name</code> 的查询会更快，例如 <code>find({name:&quot;张三&quot;})</code>。</p>
+<hr>
+<h2 id="四插入数据-insert">四、插入数据 insert</h2>
+<h3 id="1插入一条">1）插入一条</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">insertOne</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>,<span style="color:#a6e22e">city</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;北京&#34;</span>})
+</span></span></code></pre></div><p>返回 <code>insertedId</code>，MongoDB 自动生成 <code>_id</code>（ObjectId）。</p>
+<h3 id="2查询全部">2）查询全部</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">find</span>()
+</span></span></code></pre></div><p>你看到集合里有一条文档。</p>
+<h3 id="3批量插入">3）批量插入</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">insertMany</span>([{<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>,<span style="color:#a6e22e">city</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;北京&#34;</span>},{<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;李四&#34;</span>,<span style="color:#a6e22e">gender</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;男&#34;</span>}])
+</span></span></code></pre></div><p>特点：</p>
+<ul>
+<li>同一个集合里，第二条文档没有 <code>city</code>，却有 <code>gender</code> —— 这就是 MongoDB 的“字段灵活”。</li>
+</ul>
+<hr>
+<h2 id="五查询-find带条件">五、查询 find（带条件）</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">find</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>})
+</span></span></code></pre></div><p>返回所有 <code>name=&quot;张三&quot;</code> 的文档。
+这个查询会受益于你之前建的 <code>name_1</code> 索引。</p>
+<hr>
+<h2 id="六更新-update">六、更新 update</h2>
+<h3 id="1更新一条-updateone">1）更新一条 updateOne</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">updateOne</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>},{<span style="color:#a6e22e">$set</span><span style="color:#f92672">:</span>{<span style="color:#a6e22e">gender</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;女&#34;</span>}})
+</span></span></code></pre></div><p>解释：</p>
+<ul>
+<li><code>{name:&quot;张三&quot;}</code>：过滤条件（匹配第一条符合条件的文档）</li>
+<li><code>{$set:{gender:&quot;女&quot;}}</code>：更新操作符（只改 gender 字段，不会覆盖整个文档）</li>
+</ul>
+<p>返回值里：</p>
+<ul>
+<li><code>matchedCount: 1</code>：匹配到 1 条</li>
+<li><code>modifiedCount: 1</code>：实际修改 1 条</li>
+</ul>
+<p>再查：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">find</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>})
+</span></span></code></pre></div><p>你会发现：只有其中一个张三有 gender 字段。</p>
+<h3 id="2更新多条-updatemany">2）更新多条 updateMany</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">updateMany</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>},{<span style="color:#a6e22e">$set</span><span style="color:#f92672">:</span>{<span style="color:#a6e22e">city</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;上海&#34;</span>}})
+</span></span></code></pre></div><p>匹配到的两条张三都被更新为 <code>city:&quot;上海&quot;</code>。</p>
+<hr>
+<h2 id="七删除-delete">七、删除 delete</h2>
+<h3 id="1删除一条-deleteone">1）删除一条 deleteOne</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">deleteOne</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>})
+</span></span></code></pre></div><p>只删第一条匹配到的张三。</p>
+<h3 id="2删除多条-deletemany">2）删除多条 deleteMany</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">deleteMany</span>({<span style="color:#a6e22e">name</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;张三&#34;</span>})
+</span></span></code></pre></div><p>删除所有匹配到的张三。</p>
+<hr>
+<h2 id="八删除集合-drop">八、删除集合 drop</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">drop</span>()
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">true</span>
+</span></span></code></pre></div><p>删除整个集合（数据 + 索引都会没）。</p>
+<p>验证：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#a6e22e">show</span> <span style="color:#a6e22e">collections</span>
+</span></span></code></pre></div><p>student 不见了。</p>
+<hr>
+<h2 id="九总结">九、总结</h2>
+<ul>
+<li><code>show collections</code>：查看集合</li>
+<li><code>db.createCollection()</code>：创建集合（也可插入时自动创建）</li>
+<li><code>createIndex / getIndexes / dropIndex</code>：索引管理（注意 unique 是 options，不是 key）</li>
+<li><code>insertOne / insertMany</code>：插入</li>
+<li><code>find(条件)</code>：查询</li>
+<li><code>updateOne / updateMany + $set</code>：更新</li>
+<li><code>deleteOne / deleteMany</code>：删除</li>
+<li><code>drop()</code>：删集合</li>
+</ul>
+<hr>
+<h2 id="go操作mongodb">go操作mongoDB</h2>
+<h3 id="连接mongodb">连接mongoDB</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">MongoDBInit</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">option</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">options</span>.<span style="color:#a6e22e">Client</span>().<span style="color:#a6e22e">ApplyURI</span>(<span style="color:#e6db74">&#34;mongodb://localhost:27017&#34;</span>).
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">SetConnectTimeout</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>). <span style="color:#75715e">//设置超时时长</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">SetAuth</span>(<span style="color:#a6e22e">options</span>.<span style="color:#a6e22e">Credential</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">//AuthSource代表Database</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Username</span>:   <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Password</span>:   <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">AuthSource</span>: <span style="color:#e6db74">&#34;test&#34;</span>,
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">mongo</span>.<span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">option</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//Connect没有返回error不代表连接成功，ping一下检查是否连接成功</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Ping</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#66d9ef">nil</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Disconnect</span>(<span style="color:#a6e22e">ctx</span>) <span style="color:#75715e">//释放连接</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">collection</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Database</span>(<span style="color:#e6db74">&#34;test&#34;</span>).<span style="color:#a6e22e">Collection</span>(<span style="color:#e6db74">&#34;student&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//增</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">create</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">collection</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//改</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">update</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">collection</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//删</span>
+</span></span><span style="display:flex;"><span>	delete(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">collection</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//查</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">find</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">collection</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="增">增</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Student</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Name</span>  <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">City</span>  <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Score</span> <span style="color:#66d9ef">float32</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">create</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">collection</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">mongo</span>.<span style="color:#a6e22e">Collection</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//插入一个doc</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">student</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Student</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Name</span>:  <span style="color:#e6db74">&#34;张三&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">City</span>:  <span style="color:#e6db74">&#34;北京&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Score</span>: <span style="color:#ae81ff">85.5</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">res</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">collection</span>.<span style="color:#a6e22e">InsertOne</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">student</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;插入成功&#34;</span>, <span style="color:#a6e22e">res</span>.<span style="color:#a6e22e">InsertedID</span>) <span style="color:#75715e">//每个doc都会有一个全世界唯一的ID（时间+空间唯一）</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//插入多个docs</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">docs</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">interface</span>{}{<span style="color:#a6e22e">Student</span>{<span style="color:#a6e22e">Name</span>: <span style="color:#e6db74">&#34;李四&#34;</span>, <span style="color:#a6e22e">City</span>: <span style="color:#e6db74">&#34;北京&#34;</span>, <span style="color:#a6e22e">Score</span>: <span style="color:#ae81ff">24</span>}, <span style="color:#a6e22e">Student</span>{<span style="color:#a6e22e">Name</span>: <span style="color:#e6db74">&#34;王五&#34;</span>, <span style="color:#a6e22e">City</span>: <span style="color:#e6db74">&#34;南京&#34;</span>, <span style="color:#a6e22e">Score</span>: <span style="color:#ae81ff">21</span>}}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">manyRes</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">collection</span>.<span style="color:#a6e22e">InsertMany</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">docs</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;插入多个doc成功&#34;</span>, <span style="color:#a6e22e">manyRes</span>.<span style="color:#a6e22e">InsertedIDs</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="删">删</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> delete(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">collection</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">mongo</span>.<span style="color:#a6e22e">Collection</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//删除一个doc</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">filter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;name&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#e6db74">&#34;张三&#34;</span>}}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//切片过滤条件可以有多个</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">res</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">collection</span>.<span style="color:#a6e22e">DeleteMany</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">filter</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;删除成功&#34;</span>, <span style="color:#a6e22e">res</span>.<span style="color:#a6e22e">DeletedCount</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="改">改</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">update</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">collection</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">mongo</span>.<span style="color:#a6e22e">Collection</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//更新一个doc</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">filter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;city&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#e6db74">&#34;北京&#34;</span>}}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//切片过滤条件可以有多个</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//把满足在北京的学生，score加上5</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">update</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;$inc&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;score&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#ae81ff">5</span>}}}}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//切片更新条件可以有多个</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">res</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">collection</span>.<span style="color:#a6e22e">UpdateMany</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">filter</span>, <span style="color:#a6e22e">update</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//打印修改了多少条记录</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;更新成功&#34;</span>, <span style="color:#a6e22e">res</span>.<span style="color:#a6e22e">ModifiedCount</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="查">查</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">find</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">collection</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">mongo</span>.<span style="color:#a6e22e">Collection</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//查询一个doc</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sort</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;name&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#ae81ff">1</span>}} <span style="color:#75715e">//查询结果按name进行排序。1代表升序，-1代表降序</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//gt代表greater than</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">filter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;score&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#a6e22e">bson</span>.<span style="color:#a6e22e">D</span>{{<span style="color:#a6e22e">Key</span>: <span style="color:#e6db74">&#34;$gt&#34;</span>, <span style="color:#a6e22e">Value</span>: <span style="color:#ae81ff">3</span>}}}} <span style="color:#75715e">//查询结果按score大于3进行过滤</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//切片过滤条件可以有多个</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">findOptions</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">options</span>.<span style="color:#a6e22e">Find</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">findOptions</span>.<span style="color:#a6e22e">SetSort</span>(<span style="color:#a6e22e">sort</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">findOptions</span>.<span style="color:#a6e22e">SetLimit</span>(<span style="color:#ae81ff">10</span>) <span style="color:#75715e">//限制查询结果最多10条</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">findOptions</span>.<span style="color:#a6e22e">SetSkip</span>(<span style="color:#ae81ff">3</span>)   <span style="color:#75715e">//跳过前3个</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cursor</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">collection</span>.<span style="color:#a6e22e">Find</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">filter</span>, <span style="color:#a6e22e">findOptions</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cursor</span>.<span style="color:#a6e22e">Close</span>(<span style="color:#a6e22e">ctx</span>) <span style="color:#75715e">//关闭迭代器</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">cursor</span>.<span style="color:#a6e22e">Next</span>(<span style="color:#a6e22e">ctx</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">student</span> <span style="color:#a6e22e">Student</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">cursor</span>.<span style="color:#a6e22e">Decode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">student</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;查询成功&#34;</span>, <span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">City</span>, <span style="color:#a6e22e">student</span>.<span style="color:#a6e22e">Score</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div></section>
+
+  
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="http://localhost:1313/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="/main.min.cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e.js" integrity="sha512-z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP&#43;DGNKHfuwvY7kxvUdBeoGlODJ6&#43;SfaPg==" crossorigin="anonymous" defer></script></html>
