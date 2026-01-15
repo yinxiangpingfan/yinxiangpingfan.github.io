@@ -66,5 +66,7 @@
     <lastmod>2026-01-11T20:06:45+08:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/categories/</loc>
+  </url><url>
+    <loc>http://localhost:1313/guestbook/</loc>
   </url>
 </urlset>

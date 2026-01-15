@@ -1,27 +1,75 @@
 <!DOCTYPE html>
 <html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent</title>
+    <title>留言板</title>
     <meta charset="utf-8">
-    <meta name="description" content="Ladder@">
+    <meta name="description" content="Ladder@留言板 - 印象简单的博客">
     <meta name="author" content="印象简单/EasyImpr">
-    <link rel="canonical" href="http://localhost:1313/tags/agent/">
+    <link rel="canonical" href="http://localhost:1313/guestbook/">
 
     <link rel="alternate" type="application/rss+xml" href="http://localhost:1313//index.xml" title="印象简单的博客">
 
     
 
 
-    <meta property="og:url" content="http://localhost:1313/tags/agent/">
+    <meta property="og:url" content="http://localhost:1313/guestbook/">
   <meta property="og:site_name" content="印象简单的博客">
-  <meta property="og:title" content="Agent">
+  <meta property="og:title" content="留言板">
   <meta property="og:locale" content="zh">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="article">
 
 
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Agent">
+  <meta name="twitter:title" content="留言板">
 
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "留言板",
+      "item": "http://localhost:1313/guestbook/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "留言板",
+  "name": "留言板",
+  "description": "",
+  "keywords": [
+    
+  ],
+  "articleBody": "",
+  "wordCount" : "0",
+  "inLanguage": "zh",
+  "datePublished": "0001-01-01T00:00:00Z",
+  "dateModified": "0001-01-01T00:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://localhost:1313/guestbook/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://localhost:1313/favicon.ico"
+    }
+  }
+}
+</script>
     <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
 
 <link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
@@ -106,32 +154,36 @@
     </section>
 </nav>
 <div id="content">
-<div class="blog-wrapper">
-  <div>
-    <div class="blog-list">
-      
-      <article>
-        <div class="blog-card">
-          <h3><a href="/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">Agent简介以及原生调用ai</a></h3>
-          <p>
-  <small>
-    2026年1月11日&nbsp;· 408 字&nbsp;· 2 分钟</small>
-
+<div class="guestbook">
+  <h1>留言板</h1>
+  <p>您的评论，会让该网站更精彩！</p>
   
-<p>
-          <p>agent是什么，以及go通过http调用ai</p>
-        </div>
-      </article>
-      </div>
-    
-    <div class="paginator">
-      
-      <a class="prev" href="/tags/agent/">&larr;&nbsp;&nbsp;Pre Page</a>
-      
-      
-    </div>
-    
-  </div>
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
 </div>
 
         </div><footer class="footer">
