@@ -2,10 +2,10 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Life on 印象简单的博客</title>
-    <link>http://localhost:1313/tags/life/</link>
+    <link>https://yinxiangpingfan.github.io/tags/life/</link>
     <description>Recent content in Life on 印象简单的博客 created by </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh</language>
-    <lastBuildDate>Thu, 15 Jan 2026 12:25:38 +0800</lastBuildDate><atom:link href="http://localhost:1313/tags/life/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 15 Jan 2026 12:25:38 +0800</lastBuildDate><atom:link href="https://yinxiangpingfan.github.io/tags/life/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>
