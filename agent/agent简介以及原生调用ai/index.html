@@ -204,7 +204,8 @@
 <p>AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。</p>
 <h1 id="原生方法调用大模型">原生方法调用大模型</h1>
 <p>这里讲一个调用deepseek大模型的方法，先看官方文档</p>
-<p><img src="./agent01/image.png" alt=""></p>
+<p><img src="https://static.easyimpr.com./agent01/image.png" alt="" data-zoomable>
+</p>
 <p>从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式</p>
 <h2 id="非流式调用">非流式调用</h2>
 <p>现在写一个golang的调用示例，使用http包</p>
