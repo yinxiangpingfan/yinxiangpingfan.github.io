@@ -2,10 +2,10 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Codes on 印象简单的博客</title>
-    <link>https://yinxiangpingfan.github.io/code/</link>
+    <link>http://localhost:1313/code/</link>
     <description>Recent content in Codes on 印象简单的博客 created by </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh</language>
-    <lastBuildDate>Wed, 14 Jan 2026 23:05:19 +0800</lastBuildDate><atom:link href="https://yinxiangpingfan.github.io/code/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 14 Jan 2026 23:05:19 +0800</lastBuildDate><atom:link href="http://localhost:1313/code/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>
