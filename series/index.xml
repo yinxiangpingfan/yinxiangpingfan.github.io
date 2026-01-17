@@ -2,10 +2,10 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Series on 印象简单的博客</title>
-    <link>https://yinxiangpingfan.github.io/series/</link>
+    <link>http://localhost:1313/series/</link>
     <description>Recent content in Series on 印象简单的博客 created by </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh</language>
-    <lastBuildDate>Thu, 15 Jan 2026 14:33:14 +0800</lastBuildDate><atom:link href="https://yinxiangpingfan.github.io/series/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 18 Jan 2026 01:15:47 +0800</lastBuildDate><atom:link href="http://localhost:1313/series/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>
