@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callback和图状态</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="Callback和图状态">
+  <meta property="og:description" content="使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-04-18T15:40:00+08:00">
+    <meta property="article:modified_time" content="2026-04-18T15:40:00+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Callback和图状态">
+  <meta name="twitter:description" content="使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "https://yinxiangpingfan.github.io/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Callback和图状态",
+      "item": "https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Callback和图状态",
+  "name": "Callback和图状态",
+  "description": "使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享\n什么是Callback Callback（回调）是一种无侵入式的监控机制，可以在不修改业务代码的情况下，注入日志、追踪、指标等功能。在图的执行过程中，Callback可以：\n记录输入输出：追踪每个节点的输入和输出数据 性能监控：统计节点执行时间 错误追踪：捕获并记录异常信息 调试支持：帮助定位问题所在 什么是图状态 图状态（Graph State）是在图执行过程中，所有节点共享的数据结构。它可以用来：\n跨节点传递数据：在节点间共享计算结果 统计执行信息：记录节点执行次数、路径长度等 实现复杂逻辑：支持条件判断和动态行为 代码实现 定义图状态 首先定义一个状态结构体：\ntype GraphStat struct { Length int // 记录执行路径长度 } 创建图时初始化状态 使用WithGenLocalState在创建图时初始化状态：\ngraph := compose.NewGraph[*TA, *TD](compose.WithGenLocalState( func(ctx context.Context) *GraphStat { return \u0026GraphStat{ Length: 0, } })) 定义Pre和Post Handler // Pre Handler: 节点执行前调用 func NodeStatePreHandler[I any](ctx context.Context, in I, state *GraphStat) (I, error) { state.Length += 1 // 增加路径长度 return in, nil } // Post Handler: 节点执行后调用 func NodeStatePostHandler[O any](ctx context.Context, out O, state *GraphStat) (O, error) { log.Printf(\"grpath length %d\", state.Length) // 打印当前路径长度 return out, nil } 添加节点时绑定Handler graph.AddLambdaNode(\"node1\", node1, compose.WithNodeName(\"node1\"), // 指定节点名称 compose.WithStatePreHandler(NodeStatePreHandler[*TA]), // Pre Handler compose.WithStatePostHandler(NodeStatePostHandler[*TB])) // Post Handler graph.AddLambdaNode(\"node2\", node2, compose.WithNodeName(\"node2\"), compose.WithStatePreHandler(NodeStatePreHandler[*TB]), compose.WithStatePostHandler(NodeStatePostHandler[*TC])) graph.AddLambdaNode(\"node3\", node3, compose.WithNodeName(\"node3\"), compose.WithStatePreHandler(NodeStatePreHandler[*TB]), compose.WithStatePostHandler(NodeStatePostHandler[*TD])) graph.AddLambdaNode(\"node4\", node4, compose.WithNodeName(\"node4\"), compose.WithStatePreHandler(NodeStatePreHandler[*TC]), compose.WithStatePostHandler(NodeStatePostHandler[*TD])) 实现Callback Handler 方式一：完整实现 实现callbacks.Handler接口的所有方法：\ntype LoggerCallbacks struct{} func (l *LoggerCallbacks) OnStart(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context { log.Printf(\"[INPUT] name: %v, type: %v, component: %v, input: %v\", info.Name, info.Type, info.Component, input) return ctx } func (l *LoggerCallbacks) OnEnd(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context { log.Printf(\"[OUTPUT] name: %v, type: %v, component: %v, output: %v\", info.Name, info.Type, info.Component, output) return ctx } func (l *LoggerCallbacks) OnError(ctx context.Context, info *callbacks.RunInfo, err error) context.Context { log.Printf(\"[ERROR] name: %v, type: %v, component: %v, error: %v\", info.Name, info.Type, info.Component, err) return ctx } func (l *LoggerCallbacks) OnStartWithStreamInput(ctx context.Context, info *callbacks.RunInfo, input *schema.StreamReader[callbacks.CallbackInput]) context.Context { return ctx } func (l *LoggerCallbacks) OnEndWithStreamOutput(ctx context.Context, info *callbacks.RunInfo, output *schema.StreamReader[callbacks.CallbackOutput]) context.Context { return ctx } 方式二：Builder模式 只关注需要的回调时机：\nfunc GetStartAndEndCallback() callbacks.Handler { return callbacks.NewHandlerBuilder(). OnStartFn(func(ctx context.Context, info *callbacks.RunInfo, input callbacks.CallbackInput) context.Context { log.Printf(\"[INPUT] name: %v, type: %v, component: %v, input: %v\", info.Name, info.Type, info.Component, input) return ctx }). OnEndFn(func(ctx context.Context, info *callbacks.RunInfo, output callbacks.CallbackOutput) context.Context { log.Printf(\"[OUTPUT] name: %v, type: %v, component: %v, output: %v\", info.Name, info.Type, info.Component, output) return ctx }). Build() } 运行时注入Callback 在调用Invoke时传入Callback：\nresult, err := runnable.Invoke(ctx, input, compose.WithCallbacks(callbacktool.GetStartAndEndCallback())) 这种方式只在本次调用中生效，不会影响其他调用。\n全局Callback 除了运行时注入，还可以注册全局Callback，对所有图的执行生效：\nimport \"github.com/cloudwego/eino/callbacks\" // 方式一：使用完整实现的LoggerCallbacks callbacks.AppendGlobalHandlers(\u0026callbacktool.LoggerCallbacks{}) // 方式二：使用Builder模式创建的Handler callbacks.AppendGlobalHandlers(callbacktool.GetStartAndEndCallback()) 全局Callback vs 运行时Callback：\n特性 全局Callback 运行时Callback 作用范围 所有图的执行 仅当前调用 注入时机 程序启动时 运行时 典型用途 日志、监控、追踪 调试特定调用 注意：全局Callback会影响性能，建议只在调试时开启，生产环境慎用。\n完整示例 完整代码 package enio_graph import ( \"context\" callbacktool \"eino_study/callback_tool\" \"fmt\" \"log\" \"github.com/cloudwego/eino/compose\" ) type GraphStat struct { Length int } func BuildGraphWithCallBack(msg string) { ctx := context.Background() // 全局Callback（注释掉，调试时可打开） // callbacks.AppendGlobalHandlers(\u0026callbacktool.LoggerCallbacks{}) // callbacks.AppendGlobalHandlers(callbacktool.GetStartAndEndCallback()) // 构建节点 node1 := compose.InvokableLambda[*TA, *TB](func(ctx context.Context, req *TA) (*TB, error) { return \u0026TB{Data: len(req.Data)}, nil }) node2 := compose.InvokableLambda[*TB, *TC](func(ctx context.Context, req *TB) (*TC, error) { return \u0026TC{Data: float64(req.Data)}, nil }) node3 := compose.InvokableLambda[*TB, *TD](func(ctx context.Context, req *TB) (*TD, error) { return \u0026TD{Data: req.Data \u003e 5}, nil }) node4 := compose.InvokableLambda[*TC, *TD](func(ctx context.Context, input *TC) (output *TD, err error) { return \u0026TD{input.Data \u003c= 5}, nil }) // 构建图（带状态） graph := compose.NewGraph[*TA, *TD](compose.WithGenLocalState( func(ctx context.Context) *GraphStat { return \u0026GraphStat{Length: 0} })) // 添加节点（带名称、Pre/Post Handler） graph.AddLambdaNode(\"node1\", node1, compose.WithNodeName(\"node1\"), compose.WithStatePreHandler(NodeStatePreHandler[*TA]), compose.WithStatePostHandler(NodeStatePostHandler[*TB])) graph.AddLambdaNode(\"node2\", node2, compose.WithNodeName(\"node2\"), compose.WithStatePreHandler(NodeStatePreHandler[*TB]), compose.WithStatePostHandler(NodeStatePostHandler[*TC])) graph.AddLambdaNode(\"node3\", node3, compose.WithNodeName(\"node3\"), compose.WithStatePreHandler(NodeStatePreHandler[*TB]), compose.WithStatePostHandler(NodeStatePostHandler[*TD])) graph.AddLambdaNode(\"node4\", node4, compose.WithNodeName(\"node4\"), compose.WithStatePreHandler(NodeStatePreHandler[*TC]), compose.WithStatePostHandler(NodeStatePostHandler[*TD])) // 添加边 graph.AddEdge(compose.START, \"node1\") graph.AddEdge(\"node2\", \"node4\") graph.AddEdge(\"node3\", compose.END) graph.AddEdge(\"node4\", compose.END) // 添加分支 graph.AddBranch(\"node1\", compose.NewGraphBranch[*TB]( func(ctx context.Context, in *TB) (string, error) { if in.Data%2 == 0 { return \"node2\", nil } else { return \"node3\", nil } }, map[string]bool{\"node2\": true, \"node3\": true}, )) // 编译 runnable, err := graph.Compile(ctx) if err != nil { log.Fatal(err) } // 运行（注入Callback） input := \u0026TA{msg} result, err := runnable.Invoke(ctx, input, compose.WithCallbacks(callbacktool.GetStartAndEndCallback())) if err != nil { log.Fatal(err) } fmt.Println(result.Data) } func NodeStatePreHandler[I any](ctx context.Context, in I, state *GraphStat) (I, error) { state.Length += 1 return in, nil } func NodeStatePostHandler[O any](ctx context.Context, out O, state *GraphStat) (O, error) { log.Printf(\"grpath length %d\", state.Length) return out, nil } 测试代码 func TestComposeGraphWithCallBack(t *testing.T) { BuildGraphWithCallBack(\"hello, how are you\") BuildGraphWithCallBack(\"hello, how are you!\") } 运行结果 go test -v -run TestComposeGraphWithCallBack ./enio_graph/ 输出：\n=== RUN TestComposeGraphWithCallBack [INPUT] name: , type: , component: Graph, input: \u0026{hello, how are you} [INPUT] name: node1, type: , component: Lambda, input: \u0026{hello, how are you} [OUTPUT] name: node1, type: , component: Lambda, output: \u0026{18} grpath length 1 [INPUT] name: node2, type: , component: Lambda, input: \u0026{18} [OUTPUT] name: node2, type: , component: Lambda, output: \u0026{18} grpath length 2 [INPUT] name: node4, type: , component: Lambda, input: \u0026{18} [OUTPUT] name: node4, type: , component: Lambda, output: \u0026{false} grpath length 3 [OUTPUT] name: , type: , component: Graph, output: \u0026{false} false [INPUT] name: , type: , component: Graph, input: \u0026{hello, how are you!} [INPUT] name: node1, type: , component: Lambda, input: \u0026{hello, how are you!} [OUTPUT] name: node1, type: , component: Lambda, output: \u0026{19} grpath length 1 [INPUT] name: node3, type: , component: Lambda, input: \u0026{19} [OUTPUT] name: node3, type: , component: Lambda, output: \u0026{true} grpath length 2 [OUTPUT] name: , type: , component: Graph, output: \u0026{true} true --- PASS: TestComposeGraphWithCallBack (0.00s) PASS 结果分析 第一次执行（长度18，偶数） Graph START ↓ node1 (Length=1) → 输入: \"hello, how are you\" → 输出: 18 ↓ (偶数分支) node2 (Length=2) → 输入: 18 → 输出: 18.0 ↓ node4 (Length=3) → 输入: 18.0 → 输出: false ↓ Graph END 执行路径：node1 → node2 → node4，路径长度=3\n第二次执行（长度19，奇数） Graph START ↓ node1 (Length=1) → 输入: \"hello, how are you!\" → 输出: 19 ↓ (奇数分支) node3 (Length=2) → 输入: 19 → 输出: true ↓ Graph END 执行路径：node1 → node3，路径长度=2\nCallback触发时机 ┌─────────────────────────────────────────────────────────────┐ │ Callback触发时机 │ ├─────────────────────────────────────────────────────────────┤ │ │ │ Invoke() 调用 │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ OnStart │ ← Graph开始执行 │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ Pre Handler │ ← node1执行前，Length=1 │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ OnStart │ ← node1开始 │ │ │ (Lambda) │ │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ node1执行 │ │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ OnEnd │ ← node1结束 │ │ │ (Lambda) │ │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │Post Handler │ ← node1执行后，打印Length=1 │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ... 后续节点类似 ... │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ OnEnd │ ← Graph结束执行 │ │ └─────────────┘ │ │ │ └─────────────────────────────────────────────────────────────┘ 关键特性 1. 无侵入式监控 Callback不修改业务代码，通过WithCallbacks在运行时注入：\nrunnable.Invoke(ctx, input, compose.WithCallbacks(handler)) 2. 状态共享 所有节点共享同一个GraphState实例：\n// node1执行后: Length=1 // node2执行后: Length=2 // node4执行后: Length=3 3. 类型安全的Handler Pre/Post Handler使用泛型保证类型安全：\nfunc NodeStatePreHandler[I any](ctx context.Context, in I, state *GraphStat) (I, error) func NodeStatePostHandler[O any](ctx context.Context, out O, state *GraphStat) (O, error) 4. 灵活的Callback配置 支持三种配置方式：\n全局Callback：callbacks.AppendGlobalHandlers()，对所有执行生效 运行时Callback：compose.WithCallbacks()，仅对本次执行生效 特定组件Callback：cbutils.NewHandlerHelper().ChatModel(...)，只监控特定组件 // 全局Callback（程序启动时注册） callbacks.AppendGlobalHandlers(\u0026LoggerCallbacks{}) // 运行时Callback（调用时注入） runnable.Invoke(ctx, input, compose.WithCallbacks(handler)) // 特定组件Callback（只监控ChatModel） handler := cbutils.NewHandlerHelper().ChatModel(\u0026cbutils.ModelCallbackHandler{ OnStart: func(ctx context.Context, info *callbacks.RunInfo, input *model.CallbackInput) context.Context { log.Printf(\"ChatModel input: %v\", input.Messages) return ctx }, }).Handler() ",
+  "wordCount" : "1085",
+  "inLanguage": "zh",
+  "datePublished": "2026-04-18T15:40:00+08:00",
+  "dateModified": "2026-04-18T15:40:00+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>Callback和图状态</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年4月18日&nbsp;· 1085 字&nbsp;· 6 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#定义图状态">定义图状态</a></li>
+    <li><a href="#创建图时初始化状态">创建图时初始化状态</a></li>
+    <li><a href="#定义pre和post-handler">定义Pre和Post Handler</a></li>
+    <li><a href="#添加节点时绑定handler">添加节点时绑定Handler</a></li>
+    <li><a href="#实现callback-handler">实现Callback Handler</a>
+      <ul>
+        <li><a href="#方式一完整实现">方式一：完整实现</a></li>
+        <li><a href="#方式二builder模式">方式二：Builder模式</a></li>
+      </ul>
+    </li>
+    <li><a href="#运行时注入callback">运行时注入Callback</a></li>
+    <li><a href="#全局callback">全局Callback</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#完整代码">完整代码</a></li>
+    <li><a href="#测试代码">测试代码</a></li>
+    <li><a href="#运行结果">运行结果</a></li>
+    <li><a href="#结果分析">结果分析</a>
+      <ul>
+        <li><a href="#第一次执行长度18偶数">第一次执行（长度18，偶数）</a></li>
+        <li><a href="#第二次执行长度19奇数">第二次执行（长度19，奇数）</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#1-无侵入式监控">1. 无侵入式监控</a></li>
+    <li><a href="#2-状态共享">2. 状态共享</a></li>
+    <li><a href="#3-类型安全的handler">3. 类型安全的Handler</a></li>
+    <li><a href="#4-灵活的callback配置">4. 灵活的Callback配置</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>使用Eino框架的Callback机制实现图的监控，以及图状态在节点间的共享</p>
+<h1 id="什么是callback">什么是Callback</h1>
+<p>Callback（回调）是一种无侵入式的监控机制，可以在不修改业务代码的情况下，注入日志、追踪、指标等功能。在图的执行过程中，Callback可以：</p>
+<ul>
+<li><strong>记录输入输出</strong>：追踪每个节点的输入和输出数据</li>
+<li><strong>性能监控</strong>：统计节点执行时间</li>
+<li><strong>错误追踪</strong>：捕获并记录异常信息</li>
+<li><strong>调试支持</strong>：帮助定位问题所在</li>
+</ul>
+<h1 id="什么是图状态">什么是图状态</h1>
+<p>图状态（Graph State）是在图执行过程中，所有节点共享的数据结构。它可以用来：</p>
+<ul>
+<li><strong>跨节点传递数据</strong>：在节点间共享计算结果</li>
+<li><strong>统计执行信息</strong>：记录节点执行次数、路径长度等</li>
+<li><strong>实现复杂逻辑</strong>：支持条件判断和动态行为</li>
+</ul>
+<h1 id="代码实现">代码实现</h1>
+<h2 id="定义图状态">定义图状态</h2>
+<p>首先定义一个状态结构体：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">GraphStat</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Length</span> <span style="color:#66d9ef">int</span>  <span style="color:#75715e">// 记录执行路径长度</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="创建图时初始化状态">创建图时初始化状态</h2>
+<p>使用<code>WithGenLocalState</code>在创建图时初始化状态：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraph</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithGenLocalState</span>(
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">GraphStat</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Length</span>: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}))
+</span></span></code></pre></div><h2 id="定义pre和post-handler">定义Pre和Post Handler</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Pre Handler: 节点执行前调用</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#a6e22e">I</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#a6e22e">I</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">I</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">Length</span> <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>  <span style="color:#75715e">// 增加路径长度</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">in</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Post Handler: 节点执行后调用</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#a6e22e">O</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">out</span> <span style="color:#a6e22e">O</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">O</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;grpath length %d&#34;</span>, <span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">Length</span>)  <span style="color:#75715e">// 打印当前路径长度</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">out</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="添加节点时绑定handler">添加节点时绑定Handler</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">node1</span>, 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node1&#34;</span>),                              <span style="color:#75715e">// 指定节点名称</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>]),      <span style="color:#75715e">// Pre Handler</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]))    <span style="color:#75715e">// Post Handler</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#a6e22e">node2</span>, 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node2&#34;</span>),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>]))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">node3</span>, 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node3&#34;</span>),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">node4</span>, 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node4&#34;</span>),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>]),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]))
+</span></span></code></pre></div><h2 id="实现callback-handler">实现Callback Handler</h2>
+<h3 id="方式一完整实现">方式一：完整实现</h3>
+<p>实现<code>callbacks.Handler</code>接口的所有方法：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">LoggerCallbacks</span> <span style="color:#66d9ef">struct</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LoggerCallbacks</span>) <span style="color:#a6e22e">OnStart</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">input</span> <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackInput</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;[INPUT] name: %v, type: %v, component: %v, input: %v&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Type</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Component</span>, <span style="color:#a6e22e">input</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LoggerCallbacks</span>) <span style="color:#a6e22e">OnEnd</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">output</span> <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackOutput</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;[OUTPUT] name: %v, type: %v, component: %v, output: %v&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Type</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Component</span>, <span style="color:#a6e22e">output</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LoggerCallbacks</span>) <span style="color:#a6e22e">OnError</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;[ERROR] name: %v, type: %v, component: %v, error: %v&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Type</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Component</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LoggerCallbacks</span>) <span style="color:#a6e22e">OnStartWithStreamInput</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">StreamReader</span>[<span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackInput</span>]) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LoggerCallbacks</span>) <span style="color:#a6e22e">OnEndWithStreamOutput</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">output</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">StreamReader</span>[<span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackOutput</span>]) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="方式二builder模式">方式二：Builder模式</h3>
+<p>只关注需要的回调时机：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GetStartAndEndCallback</span>() <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">Handler</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">NewHandlerBuilder</span>().
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">OnStartFn</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">input</span> <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackInput</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;[INPUT] name: %v, type: %v, component: %v, input: %v&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Type</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Component</span>, <span style="color:#a6e22e">input</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>		}).
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">OnEndFn</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">output</span> <span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">CallbackOutput</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;[OUTPUT] name: %v, type: %v, component: %v, output: %v&#34;</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Type</span>, <span style="color:#a6e22e">info</span>.<span style="color:#a6e22e">Component</span>, <span style="color:#a6e22e">output</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>		}).
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Build</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="运行时注入callback">运行时注入Callback</h2>
+<p>在调用<code>Invoke</code>时传入Callback：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>, 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithCallbacks</span>(<span style="color:#a6e22e">callbacktool</span>.<span style="color:#a6e22e">GetStartAndEndCallback</span>()))
+</span></span></code></pre></div><p>这种方式只在本次调用中生效，不会影响其他调用。</p>
+<h2 id="全局callback">全局Callback</h2>
+<p>除了运行时注入，还可以注册全局Callback，对所有图的执行生效：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> <span style="color:#e6db74">&#34;github.com/cloudwego/eino/callbacks&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 方式一：使用完整实现的LoggerCallbacks</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">AppendGlobalHandlers</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">callbacktool</span>.<span style="color:#a6e22e">LoggerCallbacks</span>{})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 方式二：使用Builder模式创建的Handler</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">AppendGlobalHandlers</span>(<span style="color:#a6e22e">callbacktool</span>.<span style="color:#a6e22e">GetStartAndEndCallback</span>())
+</span></span></code></pre></div><p><strong>全局Callback vs 运行时Callback：</strong></p>
+<table>
+  <thead>
+      <tr>
+          <th>特性</th>
+          <th>全局Callback</th>
+          <th>运行时Callback</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>作用范围</td>
+          <td>所有图的执行</td>
+          <td>仅当前调用</td>
+      </tr>
+      <tr>
+          <td>注入时机</td>
+          <td>程序启动时</td>
+          <td>运行时</td>
+      </tr>
+      <tr>
+          <td>典型用途</td>
+          <td>日志、监控、追踪</td>
+          <td>调试特定调用</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>注意</strong>：全局Callback会影响性能，建议只在调试时开启，生产环境慎用。</p>
+<h1 id="完整示例">完整示例</h1>
+<h2 id="完整代码">完整代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">enio_graph</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">callbacktool</span> <span style="color:#e6db74">&#34;eino_study/callback_tool&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/compose&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">GraphStat</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Length</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">BuildGraphWithCallBack</span>(<span style="color:#a6e22e">msg</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 全局Callback（注释掉，调试时可打开）</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// callbacks.AppendGlobalHandlers(&amp;callbacktool.LoggerCallbacks{})</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// callbacks.AppendGlobalHandlers(callbacktool.GetStartAndEndCallback())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 构建节点</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node1</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TB</span>{<span style="color:#a6e22e">Data</span>: len(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node2</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TC</span>{<span style="color:#a6e22e">Data</span>: float64(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node3</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">Data</span>: <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span> &gt; <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node4</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>) (<span style="color:#a6e22e">output</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">input</span>.<span style="color:#a6e22e">Data</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 构建图（带状态）</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraph</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithGenLocalState</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">GraphStat</span>{<span style="color:#a6e22e">Length</span>: <span style="color:#ae81ff">0</span>}
+</span></span><span style="display:flex;"><span>		}))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 添加节点（带名称、Pre/Post Handler）</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">node1</span>, 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node1&#34;</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>]),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#a6e22e">node2</span>, 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node2&#34;</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>]))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">node3</span>, 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node3&#34;</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>]),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">node4</span>, 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithNodeName</span>(<span style="color:#e6db74">&#34;node4&#34;</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>]),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 添加边</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;node1&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#e6db74">&#34;node4&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 添加分支</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraphBranch</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">in</span>.<span style="color:#a6e22e">Data</span><span style="color:#f92672">%</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{<span style="color:#e6db74">&#34;node2&#34;</span>: <span style="color:#66d9ef">true</span>, <span style="color:#e6db74">&#34;node3&#34;</span>: <span style="color:#66d9ef">true</span>},
+</span></span><span style="display:flex;"><span>	))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 编译</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">runnable</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">Compile</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 运行（注入Callback）</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TA</span>{<span style="color:#a6e22e">msg</span>}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>, 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithCallbacks</span>(<span style="color:#a6e22e">callbacktool</span>.<span style="color:#a6e22e">GetStartAndEndCallback</span>()))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">result</span>.<span style="color:#a6e22e">Data</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#a6e22e">I</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#a6e22e">I</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">I</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">Length</span> <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">in</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#a6e22e">O</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">out</span> <span style="color:#a6e22e">O</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">O</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;grpath length %d&#34;</span>, <span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">Length</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">out</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="测试代码">测试代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestComposeGraphWithCallBack</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BuildGraphWithCallBack</span>(<span style="color:#e6db74">&#34;hello, how are you&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BuildGraphWithCallBack</span>(<span style="color:#e6db74">&#34;hello, how are you!&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="运行结果">运行结果</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestComposeGraphWithCallBack ./enio_graph/
+</span></span></code></pre></div><p>输出：</p>
+<pre tabindex="0"><code>=== RUN   TestComposeGraphWithCallBack
+[INPUT] name: , type: , component: Graph, input: &amp;{hello, how are you}
+[INPUT] name: node1, type: , component: Lambda, input: &amp;{hello, how are you}
+[OUTPUT] name: node1, type: , component: Lambda, output: &amp;{18}
+grpath length 1
+[INPUT] name: node2, type: , component: Lambda, input: &amp;{18}
+[OUTPUT] name: node2, type: , component: Lambda, output: &amp;{18}
+grpath length 2
+[INPUT] name: node4, type: , component: Lambda, input: &amp;{18}
+[OUTPUT] name: node4, type: , component: Lambda, output: &amp;{false}
+grpath length 3
+[OUTPUT] name: , type: , component: Graph, output: &amp;{false}
+false
+[INPUT] name: , type: , component: Graph, input: &amp;{hello, how are you!}
+[INPUT] name: node1, type: , component: Lambda, input: &amp;{hello, how are you!}
+[OUTPUT] name: node1, type: , component: Lambda, output: &amp;{19}
+grpath length 1
+[INPUT] name: node3, type: , component: Lambda, input: &amp;{19}
+[OUTPUT] name: node3, type: , component: Lambda, output: &amp;{true}
+grpath length 2
+[OUTPUT] name: , type: , component: Graph, output: &amp;{true}
+true
+--- PASS: TestComposeGraphWithCallBack (0.00s)
+PASS
+</code></pre><h2 id="结果分析">结果分析</h2>
+<h3 id="第一次执行长度18偶数">第一次执行（长度18，偶数）</h3>
+<pre tabindex="0"><code>Graph START
+    ↓
+node1 (Length=1) → 输入: &#34;hello, how are you&#34; → 输出: 18
+    ↓ (偶数分支)
+node2 (Length=2) → 输入: 18 → 输出: 18.0
+    ↓
+node4 (Length=3) → 输入: 18.0 → 输出: false
+    ↓
+Graph END
+</code></pre><p>执行路径：node1 → node2 → node4，路径长度=3</p>
+<h3 id="第二次执行长度19奇数">第二次执行（长度19，奇数）</h3>
+<pre tabindex="0"><code>Graph START
+    ↓
+node1 (Length=1) → 输入: &#34;hello, how are you!&#34; → 输出: 19
+    ↓ (奇数分支)
+node3 (Length=2) → 输入: 19 → 输出: true
+    ↓
+Graph END
+</code></pre><p>执行路径：node1 → node3，路径长度=2</p>
+<h1 id="callback触发时机">Callback触发时机</h1>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────┐
+│                    Callback触发时机                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   Invoke() 调用                                             │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │  OnStart    │  ← Graph开始执行                          │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │ Pre Handler │  ← node1执行前，Length=1                  │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │  OnStart    │  ← node1开始                              │
+│   │   (Lambda)  │                                           │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │ node1执行   │                                           │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │  OnEnd      │  ← node1结束                              │
+│   │   (Lambda)  │                                           │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │Post Handler │  ← node1执行后，打印Length=1              │
+│   └─────────────┘                                           │
+│       │                                                     │
+│       ▼                                                     │
+│   ... 后续节点类似 ...                                       │
+│       │                                                     │
+│       ▼                                                     │
+│   ┌─────────────┐                                           │
+│   │  OnEnd      │  ← Graph结束执行                          │
+│   └─────────────┘                                           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre><h1 id="关键特性">关键特性</h1>
+<h2 id="1-无侵入式监控">1. 无侵入式监控</h2>
+<p>Callback不修改业务代码，通过<code>WithCallbacks</code>在运行时注入：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithCallbacks</span>(<span style="color:#a6e22e">handler</span>))
+</span></span></code></pre></div><h2 id="2-状态共享">2. 状态共享</h2>
+<p>所有节点共享同一个GraphState实例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// node1执行后: Length=1</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node2执行后: Length=2</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node4执行后: Length=3</span>
+</span></span></code></pre></div><h2 id="3-类型安全的handler">3. 类型安全的Handler</h2>
+<p>Pre/Post Handler使用泛型保证类型安全：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePreHandler</span>[<span style="color:#a6e22e">I</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#a6e22e">I</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">I</span>, <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NodeStatePostHandler</span>[<span style="color:#a6e22e">O</span> <span style="color:#66d9ef">any</span>](<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">out</span> <span style="color:#a6e22e">O</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">GraphStat</span>) (<span style="color:#a6e22e">O</span>, <span style="color:#66d9ef">error</span>)
+</span></span></code></pre></div><h2 id="4-灵活的callback配置">4. 灵活的Callback配置</h2>
+<p>支持三种配置方式：</p>
+<ul>
+<li><strong>全局Callback</strong>：<code>callbacks.AppendGlobalHandlers()</code>，对所有执行生效</li>
+<li><strong>运行时Callback</strong>：<code>compose.WithCallbacks()</code>，仅对本次执行生效</li>
+<li><strong>特定组件Callback</strong>：<code>cbutils.NewHandlerHelper().ChatModel(...)</code>，只监控特定组件</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 全局Callback（程序启动时注册）</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">AppendGlobalHandlers</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">LoggerCallbacks</span>{})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 运行时Callback（调用时注入）</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithCallbacks</span>(<span style="color:#a6e22e">handler</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 特定组件Callback（只监控ChatModel）</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">handler</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cbutils</span>.<span style="color:#a6e22e">NewHandlerHelper</span>().<span style="color:#a6e22e">ChatModel</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cbutils</span>.<span style="color:#a6e22e">ModelCallbackHandler</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">OnStart</span>: <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">info</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">callbacks</span>.<span style="color:#a6e22e">RunInfo</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">model</span>.<span style="color:#a6e22e">CallbackInput</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;ChatModel input: %v&#34;</span>, <span style="color:#a6e22e">input</span>.<span style="color:#a6e22e">Messages</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ctx</span>
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>}).<span style="color:#a6e22e">Handler</span>()
+</span></span></code></pre></div></section>
+
+  
+  
+  <div class="paginator">
+    
+    <a class="prev" href="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M9.94496 9C9.28897 9.61644 7.63215 10.997 6.04814 11.7966C5.98257 11.8297 5.98456 11.9753 6.05061 12.0063C7.05496 12.4779 8.92941 13.9264 9.94496 15M6.44444 11.9667C8.86549 12.0608 14 12 16 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span>自行实现ChainAgent</span></a>
+    
+    
+    <a class="next" href="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/"><span>图的构建</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

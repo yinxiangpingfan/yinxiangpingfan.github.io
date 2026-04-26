@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档的加载和转换</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@如何使用eino框架加载和转换不同格式的文档">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="文档的加载和转换">
+  <meta property="og:description" content="如何使用eino框架加载和转换不同格式的文档">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-04-16T17:22:47+08:00">
+    <meta property="article:modified_time" content="2026-04-16T17:22:47+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="文档的加载和转换">
+  <meta name="twitter:description" content="如何使用eino框架加载和转换不同格式的文档">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "https://yinxiangpingfan.github.io/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "文档的加载和转换",
+      "item": "https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "文档的加载和转换",
+  "name": "文档的加载和转换",
+  "description": "如何使用eino框架加载和转换不同格式的文档\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "如何使用eino框架加载和转换不同格式的文档\n为什么需要文档加载和转换 在构建RAG(检索增强生成)系统时,第一步就是要处理各种格式的文档。企业内部的文档可能是Word、PDF、Excel、HTML等多种格式,我们需要将这些文档加载并转换为统一的文本格式,才能进行后续的向量化和检索。\n文档解析 创建解析器 首先创建各种格式的解析器实例:\nctx := context.Background() // 文本解析器(默认) textParser := parser.TextParser{} // Word文档解析器 docParser, err := docx.NewDocxParser(ctx, \u0026docx.Config{ IncludeTables: true, // 包含表格 IncludeFooters: false, // 不包含页脚 IncludeHeaders: false, // 不包含页眉 }) // HTML解析器 selector := \"body\" htmlParser, err := html.NewParser(ctx, \u0026html.Config{ Selector: \u0026selector, // 只解析body部分 }) // PDF解析器 pdfParser, err := pdf.NewPDFParser(ctx, \u0026pdf.Config{}) // Excel解析器 excelParser, err := xlsx.NewXlsxParser(ctx, \u0026xlsx.Config{}) 统一解析器 使用 ExtParser 将所有解析器统一管理:\n// 创建扩展解析器 extParser, err := parser.NewExtParser(ctx, \u0026parser.ExtParserConfig{ Parsers: map[string]parser.Parser{ \".docx\": docParser, \".html\": htmlParser, \".pdf\": pdfParser, \".xlsx\": excelParser, }, FallbackParser: textParser, // 默认使用文本解析器 }, ) 设计优势:\n统一接口: 通过文件扩展名自动选择对应的解析器 容错机制: 未配置格式的文档会使用默认的文本解析器 易于扩展: 可以轻松添加新的解析器 解析文档 使用 ParseFile 函数解析文档:\nfunc ParseFile(docPath string) { ctx := context.Background() // ... 创建解析器代码 ... // 打开文件 file, err := os.Open(docPath) if err != nil { log.Fatal(err) } defer file.Close() // 解析文档 doc, err := extParser.Parse(ctx, file, parser.WithURI(docPath)) if err != nil { log.Fatal(err) } // 输出解析结果 for _, v := range doc { fmt.Println(v.Content) } } 测试结果 运行测试可以看到不同格式文档的解析结果:\ngo test -v -run TestLoadDocument Markdown文档解析:\n# 美国用工政策 ## 美国的工资 全国（联邦）最低工资为每小时7.25USD或每月1,160USD。 ## 美国的工作时间 标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。 ... HTML文档解析:\nHTML文档会过滤掉标签,只提取文本内容:\n美国用工政策 美国的工资 全国（联邦）最低工资为每小时7.25USD或每月1,160USD。 美国的工作时间 标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。 ... PDF文档解析:\nPDF文档会保留原有的排版格式:\n美国用工政策 美国的工资 全国（联邦）最低工资为每小时7.25USD或每月1,160USD。 美国的工作时间 标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。 ... Excel表格解析:\n表格数据会以行列形式输出:\nTom\t1\t4\t7 Lily\t2\t5\t8 Jerry\t3\t6\t9 Word文档解析:\nWord文档会区分正文和表格:\n=== MAIN CONTENT === ### 观沧海 树木丛生，百草丰茂。 秋风萧瑟，洪波涌起。 === TABLES === | 观沧海 | | | -------- | -------- | | | | | 树木丛生 | 百草丰茂 | | 秋风萧瑟 | 洪波涌起 | 文档加载 使用FileLoader 除了直接解析,还可以使用 FileLoader 来加载文档:\nfunc LoadDoc(docPath string) { ctx := context.Background() // ... 创建解析器代码 ... // 创建文件加载器 loader, err := file.NewFileLoader(ctx, \u0026file.FileLoaderConfig{ Parser: extParser, UseNameAsID: true, // 使用文件名作为文档ID }) // 加载文档 docs, err := loader.Load(ctx, document.Source{ URI: docPath, }) // 输出加载结果 for _, v := range docs { fmt.Println(v.Content) } } FileLoader vs Parse的区别:\nParse: 直接解析文件流,返回文档列表 Load: 从指定URI加载文档,可以添加更多元数据信息 文档转换 为什么需要文档分割 在RAG系统中,长文档需要分割成小块才能进行有效的检索:\n提高检索精度: 小块文本的语义更明确 控制token数量: 避免超出模型的上下文窗口 提高响应质量: 只检索相关片段,减少噪音 Markdown标题分割 使用 HeaderSplitter 按Markdown标题分割文档:\nfunc TransformDoc(docPath string) { // 读取文件内容 file, err := os.Open(docPath) if err != nil { log.Fatal(err) } defer file.Close() content, err := io.ReadAll(file) if err != nil { log.Fatal(err) } // 创建文档对象 doc := schema.Document{ Content: string(content), } ctx := context.Background() // 创建标题分割器 splitTransformer, _ := markdown.NewHeaderSplitter(ctx, \u0026markdown.HeaderConfig{ Headers: map[string]string{ \"##\": \"\", // 按##标题分割 }, TrimHeaders: true, // 不包含标题本身 }) // 执行分割 transformedDocs, _ := splitTransformer.Transform(ctx, []*schema.Document{\u0026doc}) // 输出分割结果 for k, v := range transformedDocs { fmt.Printf(\"segment %d, content : %s\\n\", k, v.Content) } } 测试结果 运行测试可以看到文档被按标题分割:\ngo test -v -run TestTransformDocument 输出结果:\nsegment 0, content : # 美国用工政策 segment 1, content : 全国（联邦）最低工资为每小时7.25USD或每月1,160USD。 segment 2, content : 标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。 segment 3, content : 美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一... ... segment 14, content : 没有永久居民身份或工作签证的外国人不得在美国工作... 分割原理:\n每个二级标题(##)作为分割点 TrimHeaders: true 表示分割后的内容不包含标题本身 分割后的每个片段都是一个独立的 schema.Document 对象 ",
+  "wordCount" : "437",
+  "inLanguage": "zh",
+  "datePublished": "2026-04-16T17:22:47+08:00",
+  "dateModified": "2026-04-16T17:22:47+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>文档的加载和转换</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年4月16日&nbsp;· 437 字&nbsp;· 3 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#创建解析器">创建解析器</a></li>
+    <li><a href="#统一解析器">统一解析器</a></li>
+    <li><a href="#解析文档">解析文档</a></li>
+    <li><a href="#测试结果">测试结果</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#使用fileloader">使用FileLoader</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#为什么需要文档分割">为什么需要文档分割</a></li>
+    <li><a href="#markdown标题分割">Markdown标题分割</a></li>
+    <li><a href="#测试结果-1">测试结果</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>如何使用eino框架加载和转换不同格式的文档</p>
+<h1 id="为什么需要文档加载和转换">为什么需要文档加载和转换</h1>
+<p>在构建RAG(检索增强生成)系统时,第一步就是要处理各种格式的文档。企业内部的文档可能是Word、PDF、Excel、HTML等多种格式,我们需要将这些文档加载并转换为统一的文本格式,才能进行后续的向量化和检索。</p>
+<h1 id="文档解析">文档解析</h1>
+<h2 id="创建解析器">创建解析器</h2>
+<p>首先创建各种格式的解析器实例:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 文本解析器(默认)</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">textParser</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parser</span>.<span style="color:#a6e22e">TextParser</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Word文档解析器</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">docParser</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">docx</span>.<span style="color:#a6e22e">NewDocxParser</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">docx</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">IncludeTables</span>:  <span style="color:#66d9ef">true</span>,   <span style="color:#75715e">// 包含表格</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">IncludeFooters</span>: <span style="color:#66d9ef">false</span>,  <span style="color:#75715e">// 不包含页脚</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">IncludeHeaders</span>: <span style="color:#66d9ef">false</span>,  <span style="color:#75715e">// 不包含页眉</span>
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// HTML解析器</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">selector</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;body&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">htmlParser</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">html</span>.<span style="color:#a6e22e">NewParser</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">html</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Selector</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">selector</span>,  <span style="color:#75715e">// 只解析body部分</span>
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// PDF解析器</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pdfParser</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pdf</span>.<span style="color:#a6e22e">NewPDFParser</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pdf</span>.<span style="color:#a6e22e">Config</span>{})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Excel解析器</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">excelParser</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">xlsx</span>.<span style="color:#a6e22e">NewXlsxParser</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">xlsx</span>.<span style="color:#a6e22e">Config</span>{})
+</span></span></code></pre></div><h2 id="统一解析器">统一解析器</h2>
+<p>使用 <code>ExtParser</code> 将所有解析器统一管理:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 创建扩展解析器</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">extParser</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parser</span>.<span style="color:#a6e22e">NewExtParser</span>(<span style="color:#a6e22e">ctx</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">parser</span>.<span style="color:#a6e22e">ExtParserConfig</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Parsers</span>: <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#a6e22e">parser</span>.<span style="color:#a6e22e">Parser</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#e6db74">&#34;.docx&#34;</span>: <span style="color:#a6e22e">docParser</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#e6db74">&#34;.html&#34;</span>: <span style="color:#a6e22e">htmlParser</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#e6db74">&#34;.pdf&#34;</span>:  <span style="color:#a6e22e">pdfParser</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#e6db74">&#34;.xlsx&#34;</span>: <span style="color:#a6e22e">excelParser</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">FallbackParser</span>: <span style="color:#a6e22e">textParser</span>, <span style="color:#75715e">// 默认使用文本解析器</span>
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>设计优势:</strong></p>
+<ul>
+<li><strong>统一接口</strong>: 通过文件扩展名自动选择对应的解析器</li>
+<li><strong>容错机制</strong>: 未配置格式的文档会使用默认的文本解析器</li>
+<li><strong>易于扩展</strong>: 可以轻松添加新的解析器</li>
+</ul>
+<h2 id="解析文档">解析文档</h2>
+<p>使用 <code>ParseFile</code> 函数解析文档:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ParseFile</span>(<span style="color:#a6e22e">docPath</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... 创建解析器代码 ...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 打开文件</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">docPath</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 解析文档</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">doc</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">extParser</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">parser</span>.<span style="color:#a6e22e">WithURI</span>(<span style="color:#a6e22e">docPath</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 输出解析结果</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">doc</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="测试结果">测试结果</h2>
+<p>运行测试可以看到不同格式文档的解析结果:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestLoadDocument
+</span></span></code></pre></div><p><strong>Markdown文档解析:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#75715e"># 美国用工政策</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 美国的工资</span>
+</span></span><span style="display:flex;"><span>全国（联邦）最低工资为每小时7.25USD或每月1,160USD。
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 美国的工作时间</span>
+</span></span><span style="display:flex;"><span>标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p><strong>HTML文档解析:</strong></p>
+<p>HTML文档会过滤掉标签,只提取文本内容:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>美国用工政策 
+</span></span><span style="display:flex;"><span>美国的工资 
+</span></span><span style="display:flex;"><span>全国（联邦）最低工资为每小时7.25USD或每月1,160USD。
+</span></span><span style="display:flex;"><span>美国的工作时间 
+</span></span><span style="display:flex;"><span>标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p><strong>PDF文档解析:</strong></p>
+<p>PDF文档会保留原有的排版格式:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>美国用工政策
+</span></span><span style="display:flex;"><span>美国的工资
+</span></span><span style="display:flex;"><span>全国（联邦）最低工资为每小时7.25USD或每月1,160USD。
+</span></span><span style="display:flex;"><span>美国的工作时间
+</span></span><span style="display:flex;"><span>标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p><strong>Excel表格解析:</strong></p>
+<p>表格数据会以行列形式输出:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>Tom	1	4	<span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span>Lily	2	5	<span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>Jerry	3	6	<span style="color:#ae81ff">9</span>
+</span></span></code></pre></div><p><strong>Word文档解析:</strong></p>
+<p>Word文档会区分正文和表格:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#f92672">===</span> MAIN CONTENT <span style="color:#f92672">===</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">### 观沧海</span>
+</span></span><span style="display:flex;"><span>树木丛生，百草丰茂。
+</span></span><span style="display:flex;"><span>秋风萧瑟，洪波涌起。
+</span></span><span style="display:flex;"><span><span style="color:#f92672">===</span> TABLES <span style="color:#f92672">===</span>
+</span></span><span style="display:flex;"><span>| 观沧海  |         |
+</span></span><span style="display:flex;"><span>| -------- | -------- |
+</span></span><span style="display:flex;"><span>|         |         |
+</span></span><span style="display:flex;"><span>| 树木丛生 | 百草丰茂 |
+</span></span><span style="display:flex;"><span>| 秋风萧瑟 | 洪波涌起 |
+</span></span></code></pre></div><h1 id="文档加载">文档加载</h1>
+<h2 id="使用fileloader">使用FileLoader</h2>
+<p>除了直接解析,还可以使用 <code>FileLoader</code> 来加载文档:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">LoadDoc</span>(<span style="color:#a6e22e">docPath</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... 创建解析器代码 ...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 创建文件加载器</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">loader</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">NewFileLoader</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">FileLoaderConfig</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Parser</span>:      <span style="color:#a6e22e">extParser</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">UseNameAsID</span>: <span style="color:#66d9ef">true</span>,  <span style="color:#75715e">// 使用文件名作为文档ID</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 加载文档</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">docs</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">loader</span>.<span style="color:#a6e22e">Load</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">document</span>.<span style="color:#a6e22e">Source</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">URI</span>: <span style="color:#a6e22e">docPath</span>,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 输出加载结果</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">docs</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>FileLoader vs Parse的区别:</strong></p>
+<ul>
+<li><code>Parse</code>: 直接解析文件流,返回文档列表</li>
+<li><code>Load</code>: 从指定URI加载文档,可以添加更多元数据信息</li>
+</ul>
+<h1 id="文档转换">文档转换</h1>
+<h2 id="为什么需要文档分割">为什么需要文档分割</h2>
+<p>在RAG系统中,长文档需要分割成小块才能进行有效的检索:</p>
+<ol>
+<li><strong>提高检索精度</strong>: 小块文本的语义更明确</li>
+<li><strong>控制token数量</strong>: 避免超出模型的上下文窗口</li>
+<li><strong>提高响应质量</strong>: 只检索相关片段,减少噪音</li>
+</ol>
+<h2 id="markdown标题分割">Markdown标题分割</h2>
+<p>使用 <code>HeaderSplitter</code> 按Markdown标题分割文档:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TransformDoc</span>(<span style="color:#a6e22e">docPath</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 读取文件内容</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">docPath</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">content</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">file</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 创建文档对象</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">doc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Document</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Content</span>: string(<span style="color:#a6e22e">content</span>),
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 创建标题分割器</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">splitTransformer</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">markdown</span>.<span style="color:#a6e22e">NewHeaderSplitter</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">markdown</span>.<span style="color:#a6e22e">HeaderConfig</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Headers</span>: <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">string</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#e6db74">&#34;##&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,  <span style="color:#75715e">// 按##标题分割</span>
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">TrimHeaders</span>: <span style="color:#66d9ef">true</span>,  <span style="color:#75715e">// 不包含标题本身</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 执行分割</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">transformedDocs</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">splitTransformer</span>.<span style="color:#a6e22e">Transform</span>(<span style="color:#a6e22e">ctx</span>, []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Document</span>{<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">doc</span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 输出分割结果</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">k</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">transformedDocs</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;segment %d, content : %s\n&#34;</span>, <span style="color:#a6e22e">k</span>, <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="测试结果-1">测试结果</h2>
+<p>运行测试可以看到文档被按标题分割:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestTransformDocument
+</span></span></code></pre></div><p>输出结果:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>segment 0, content : <span style="color:#75715e"># 美国用工政策</span>
+</span></span><span style="display:flex;"><span>segment 1, content : 全国（联邦）最低工资为每小时7.25USD或每月1,160USD。
+</span></span><span style="display:flex;"><span>segment 2, content : 标准工作时间为每天8小时，每周40小时，标准工作周为周一至周五。
+</span></span><span style="display:flex;"><span>segment 3, content : 美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一...
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>segment 14, content : 没有永久居民身份或工作签证的外国人不得在美国工作...
+</span></span></code></pre></div><p><strong>分割原理:</strong></p>
+<ul>
+<li>每个二级标题(<code>##</code>)作为分割点</li>
+<li><code>TrimHeaders: true</code> 表示分割后的内容不包含标题本身</li>
+<li>分割后的每个片段都是一个独立的 <code>schema.Document</code> 对象</li>
+</ul></section>
+
+  
+  
+  <div class="paginator">
+    
+    <a class="prev" href="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M9.94496 9C9.28897 9.61644 7.63215 10.997 6.04814 11.7966C5.98257 11.8297 5.98456 11.9753 6.05061 12.0063C7.05496 12.4779 8.92941 13.9264 9.94496 15M6.44444 11.9667C8.86549 12.0608 14 12 16 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span>基于向量的语义相似检索</span></a>
+    
+    
+    <a class="next" href="https://yinxiangpingfan.github.io/agent/embedding%E8%AF%8D%E5%90%91%E9%87%8F%E6%8A%80%E6%9C%AF%E8%AF%A6%E8%A7%A3/"><span>Embedding词向量技术详解</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

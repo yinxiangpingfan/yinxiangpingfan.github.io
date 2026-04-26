@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于向量的语义相似检索</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="基于向量的语义相似检索">
+  <meta property="og:description" content="如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-04-17T18:10:00+08:00">
+    <meta property="article:modified_time" content="2026-04-17T18:10:00+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="基于向量的语义相似检索">
+  <meta name="twitter:description" content="如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "https://yinxiangpingfan.github.io/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "基于向量的语义相似检索",
+      "item": "https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "基于向量的语义相似检索",
+  "name": "基于向量的语义相似检索",
+  "description": "如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统\n为什么需要向量检索 在传统的搜索引擎中，我们使用关键词匹配来查找文档。但这种方法有很大的局限性：\n同义词问题：用户搜索\"汽车\"，但文档中写的是\"轿车\"，无法匹配 语义理解：用户搜索\"美国退休年龄\"，文档中写的是\"美国平均退休年龄：66.33岁\"，关键词完全不同 模糊查询：用户的问题表述与文档内容不完全一致 向量检索通过将文本转换为向量，然后在向量空间中计算相似度，可以解决这些问题。\n工作原理 用户查询: \"美国多少岁可以退休？\" ↓ 转换为向量: [0.12, 0.34, -0.56, ...] ↓ 在向量数据库中搜索相似向量 ↓ 返回最相似的文档: \"美国平均退休年龄：66.33岁\" Qdrant向量数据库 Qdrant是一个高性能的向量数据库，专门用于向量相似度搜索。它具有以下特点：\n高性能：使用HNSW算法实现快速近似最近邻搜索 过滤支持：支持在向量搜索的同时进行元数据过滤 分布式：支持水平扩展 多语言SDK：支持Python、Go、Rust等多种语言 代码实现 依赖安装 go get github.com/qdrant/go-client/qdrant go get github.com/cloudwego/eino-ext/components/indexer/qdrant go get github.com/cloudwego/eino-ext/components/retriever/qdrant 创建Qdrant客户端 使用单例模式创建Qdrant客户端，避免重复连接：\nvar qdrantClient *qdrant.Client var so sync.Once func NewQdrantClient() *qdrant.Client { so.Do(func() { var err error qdrantClient, err = qdrant.NewClient(\u0026qdrant.Config{ Host: \"127.0.0.1\", Port: 6334, }) if err != nil { log.Fatalf(\"NewClient failed, err=%v\", err) } }) return qdrantClient } 创建索引器 索引器负责将文档向量化并存入Qdrant：\nfunc NewQdrantIndexer(ctx context.Context, client *qdrant.Client) *qdrant_indexer.Indexer { CollectName := \"test_collection\" var indexer *qdrant_indexer.Indexer if true, err := client.CollectionExists(ctx, CollectName); err == nil { // 如果集合已存在，先删除 if err := client.DeleteCollection(ctx, CollectName); err != nil { log.Fatalf(\"DeleteCollection failed, err=%v\", err) } // 创建新的索引器 indexer, err = qdrant_indexer.NewIndexer(ctx, \u0026qdrant_indexer.Config{ Client: client, Embedding: \u0026NormalizedEmbedder{ OriginalEmbedder: Embeddder, }, VectorDim: 768, // 向量维度 Distance: qdrant.Distance_Dot, // 使用内积距离 Collection: CollectName, }) if err != nil { log.Fatalf(\"NewIndexer failed, err=%v\", err) } } return indexer } 关键配置说明：\nVectorDim: 768：向量维度，必须与Embedding模型的输出维度一致 Distance: qdrant.Distance_Dot：使用内积距离。由于向量已归一化，内积等于余弦相似度 归一化Embedder 为了使用内积距离计算相似度，需要将向量归一化（模长为1）：\ntype NormalizedEmbedder struct { OriginalEmbedder *ollama.Embedder } func (ne *NormalizedEmbedder) EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error) { // 1. 调用原始Embedding模型获取向量 vectors, err := ne.OriginalEmbedder.EmbedStrings(ctx, texts, opts...) if err != nil { return nil, err } // 2. 对向量进行归一化 for i, v := range vectors { vectors[i] = NormalizeVector(v) } // 3. 返回模长为1的向量 return vectors, nil } 为什么要归一化？\n归一化后，向量的模长为1，此时：\n内积 = 余弦相似度 内积计算比余弦相似度计算更快（不需要除法） 存储文档 将文档存入向量数据库：\nfunc StoreEmbeddings(ctx context.Context, docs []*schema.Document, indexer *qdrant_indexer.Indexer) error { ids, err := indexer.Store(ctx, docs) if err != nil { return err } fmt.Printf(\"Store %d documents, ids: %v\\n\", len(ids), ids) return nil } 语义检索 根据查询文本检索相似文档：\nfunc GetEmbeddings(ctx context.Context, query string, CollectName string, client *qdrant.Client, indexer *qdrant_indexer.Indexer) ([]*schema.Document, error) { scoreThresh := 0.3 retriever, _ := qdrant_retriever.NewRetriever(ctx, \u0026qdrant_retriever.Config{ Client: client, Embedding: \u0026NormalizedEmbedder{OriginalEmbedder: Embeddder}, TopK: 20, // 返回最相似的20个文档 ScoreThreshold: \u0026scoreThresh, // 相似度阈值 Collection: CollectName, }) // 执行检索，并添加过滤条件 neighbors, _ := retriever.Retrieve(ctx, query, qdrant_retriever.WithFilter(\u0026qdrant.Filter{ Must: []*qdrant.Condition{ qdrant.NewMatch(\"metadata.source\", \"sohu\"), // 只返回source为sohu的文档 }, }), ) return neighbors, nil } 过滤条件的作用：\n在实际应用中，我们经常需要在向量搜索的同时进行元数据过滤。例如：\n只搜索特定来源的文档 只搜索特定时间段的文档 只搜索特定用户有权访问的文档 Qdrant支持先过滤再搜索，效率很高。\n完整示例 测试代码 func TestGetEmbeddings(t *testing.T) { ctx := context.Background() // 准备测试文档 docs := []*schema.Document{ { ID: uuid.NewString(), Content: \"美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一...\", MetaData: map[string]any{ \"source\": \"sohu\", }, }, { ID: uuid.NewString(), Content: \"美国平均退休年龄：66.33岁\", MetaData: map[string]any{ \"source\": \"sina\", }, }, { ID: uuid.NewString(), Content: \"美国平均退休年龄：66.33岁\", MetaData: map[string]any{ \"source\": \"sohu\", }, }, } // 初始化 NewEmbedder() client := NewQdrantClient() indexer := NewQdrantIndexer(ctx, client) // 存储文档 err := StoreEmbeddings(ctx, docs, indexer) if err != nil { t.Fatal(err) } // 语义检索 docreturn, err := GetEmbeddings(ctx, \"美国多少岁可以退休？\", \"test_collection\", client, indexer) if err != nil { t.Fatalf(\"GetEmbeddings failed: %v\", err) } // 输出结果 for i, doc := range docreturn { fmt.Printf(\"%d %.4f %s\\n\", i, doc.Score(), doc.Content) } } 运行结果 go test -v -run TestGetEmbeddings ./rag/ 输出：\n=== RUN TestGetEmbeddings Store 3 documents, ids: [49d45bf9-d731-4747-bab3-beed8da245b9 adba8c24-ceb0-4b7a-8f6e-21c6e78c0da9 27aab4dc-7061-469d-89cb-3cefe8189cba] index_test.go:45: StoreEmbeddings success index_test.go:50: 返回文档数量: 2 0 0.7797 美国平均退休年龄：66.33岁 1 0.7164 美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一... --- PASS: TestGetEmbeddings (1.02s) PASS 结果分析 排名 相似度 文档内容 说明 1 0.7797 美国平均退休年龄：66.33岁 最相关，直接回答了问题 2 0.7164 美国9个国家公共假日… 次相关，都是美国相关信息 关键观察：\n语义理解正确：查询\"美国多少岁可以退休？\"，最相似的是\"美国平均退休年龄：66.33岁\"，语义完全匹配 过滤生效：虽然存储了3篇文档，但只返回了2篇（过滤条件是source=sohu） 相似度排序：结果按相似度从高到低排序 架构图 ┌─────────────────────────────────────────────────────────────┐ │ RAG检索流程 │ ├─────────────────────────────────────────────────────────────┤ │ │ │ 用户查询 │ │ \"美国多少岁可以退休？\" │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ Embedder │ 文本 → 向量 │ │ │ (归一化) │ [0.12, 0.34, -0.56, ...] │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ Qdrant │ 向量相似度搜索 + 元数据过滤 │ │ │ Retriever │ │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ 返回结果 │ 按相似度排序的文档列表 │ │ │ - Doc1 │ 0.7797 美国平均退休年龄 │ │ │ - Doc2 │ 0.7164 美国公共假日 │ │ └─────────────┘ │ │ │ └─────────────────────────────────────────────────────────────┘ 性能优化建议 1. 向量归一化 使用内积距离时，确保向量已归一化：\n// 归一化后，内积 = 余弦相似度 Distance: qdrant.Distance_Dot 2. 合理设置TopK TopK: 20, // 根据实际需求调整，不是越大越好 TopK过大：\n返回结果中可能包含不相关内容 后续LLM处理的token消耗增加 TopK过小：\n可能遗漏相关内容 3. 设置相似度阈值 scoreThresh := 0.3 ScoreThreshold: \u0026scoreThresh, 过滤掉相似度过低的文档，提高结果质量。\n4. 使用元数据过滤 qdrant_retriever.WithFilter(\u0026qdrant.Filter{ Must: []*qdrant.Condition{ qdrant.NewMatch(\"metadata.source\", \"sohu\"), }, }) 先过滤再搜索，减少搜索范围，提高效率。\n",
+  "wordCount" : "635",
+  "inLanguage": "zh",
+  "datePublished": "2026-04-17T18:10:00+08:00",
+  "dateModified": "2026-04-17T18:10:00+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>基于向量的语义相似检索</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年4月17日&nbsp;· 635 字&nbsp;· 3 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#工作原理">工作原理</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#依赖安装">依赖安装</a></li>
+    <li><a href="#创建qdrant客户端">创建Qdrant客户端</a></li>
+    <li><a href="#创建索引器">创建索引器</a></li>
+    <li><a href="#归一化embedder">归一化Embedder</a></li>
+    <li><a href="#存储文档">存储文档</a></li>
+    <li><a href="#语义检索">语义检索</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#测试代码">测试代码</a></li>
+    <li><a href="#运行结果">运行结果</a></li>
+    <li><a href="#结果分析">结果分析</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#1-向量归一化">1. 向量归一化</a></li>
+    <li><a href="#2-合理设置topk">2. 合理设置TopK</a></li>
+    <li><a href="#3-设置相似度阈值">3. 设置相似度阈值</a></li>
+    <li><a href="#4-使用元数据过滤">4. 使用元数据过滤</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>如何使用Qdrant向量数据库实现语义相似检索，构建高效的RAG系统</p>
+<h1 id="为什么需要向量检索">为什么需要向量检索</h1>
+<p>在传统的搜索引擎中，我们使用关键词匹配来查找文档。但这种方法有很大的局限性：</p>
+<ul>
+<li><strong>同义词问题</strong>：用户搜索&quot;汽车&quot;，但文档中写的是&quot;轿车&quot;，无法匹配</li>
+<li><strong>语义理解</strong>：用户搜索&quot;美国退休年龄&quot;，文档中写的是&quot;美国平均退休年龄：66.33岁&quot;，关键词完全不同</li>
+<li><strong>模糊查询</strong>：用户的问题表述与文档内容不完全一致</li>
+</ul>
+<p>向量检索通过将文本转换为向量，然后在向量空间中计算相似度，可以解决这些问题。</p>
+<h2 id="工作原理">工作原理</h2>
+<pre tabindex="0"><code>用户查询: &#34;美国多少岁可以退休？&#34;
+    ↓
+转换为向量: [0.12, 0.34, -0.56, ...]
+    ↓
+在向量数据库中搜索相似向量
+    ↓
+返回最相似的文档: &#34;美国平均退休年龄：66.33岁&#34;
+</code></pre><h1 id="qdrant向量数据库">Qdrant向量数据库</h1>
+<p>Qdrant是一个高性能的向量数据库，专门用于向量相似度搜索。它具有以下特点：</p>
+<ul>
+<li><strong>高性能</strong>：使用HNSW算法实现快速近似最近邻搜索</li>
+<li><strong>过滤支持</strong>：支持在向量搜索的同时进行元数据过滤</li>
+<li><strong>分布式</strong>：支持水平扩展</li>
+<li><strong>多语言SDK</strong>：支持Python、Go、Rust等多种语言</li>
+</ul>
+<h1 id="代码实现">代码实现</h1>
+<h2 id="依赖安装">依赖安装</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go get github.com/qdrant/go-client/qdrant
+</span></span><span style="display:flex;"><span>go get github.com/cloudwego/eino-ext/components/indexer/qdrant
+</span></span><span style="display:flex;"><span>go get github.com/cloudwego/eino-ext/components/retriever/qdrant
+</span></span></code></pre></div><h2 id="创建qdrant客户端">创建Qdrant客户端</h2>
+<p>使用单例模式创建Qdrant客户端，避免重复连接：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">qdrantClient</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Client</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">so</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Once</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewQdrantClient</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Client</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">so</span>.<span style="color:#a6e22e">Do</span>(<span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">qdrantClient</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Host</span>: <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Port</span>: <span style="color:#ae81ff">6334</span>,
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;NewClient failed, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">qdrantClient</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="创建索引器">创建索引器</h2>
+<p>索引器负责将文档向量化并存入Qdrant：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewQdrantIndexer</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">client</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Client</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">Indexer</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">CollectName</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;test_collection&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">indexer</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">Indexer</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#66d9ef">true</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">CollectionExists</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">CollectName</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果集合已存在，先删除</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">DeleteCollection</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">CollectName</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;DeleteCollection failed, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 创建新的索引器</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">indexer</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">NewIndexer</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Client</span>: <span style="color:#a6e22e">client</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Embedding</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">NormalizedEmbedder</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">OriginalEmbedder</span>: <span style="color:#a6e22e">Embeddder</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">VectorDim</span>:  <span style="color:#ae81ff">768</span>,                 <span style="color:#75715e">// 向量维度</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Distance</span>:   <span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Distance_Dot</span>, <span style="color:#75715e">// 使用内积距离</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Collection</span>: <span style="color:#a6e22e">CollectName</span>,
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;NewIndexer failed, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">indexer</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>关键配置说明：</strong></p>
+<ul>
+<li><code>VectorDim: 768</code>：向量维度，必须与Embedding模型的输出维度一致</li>
+<li><code>Distance: qdrant.Distance_Dot</code>：使用内积距离。由于向量已归一化，内积等于余弦相似度</li>
+</ul>
+<h2 id="归一化embedder">归一化Embedder</h2>
+<p>为了使用内积距离计算相似度，需要将向量归一化（模长为1）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">NormalizedEmbedder</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">OriginalEmbedder</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">ollama</span>.<span style="color:#a6e22e">Embedder</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ne</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">NormalizedEmbedder</span>) <span style="color:#a6e22e">EmbedStrings</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">texts</span> []<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">embedding</span>.<span style="color:#a6e22e">Option</span>) ([][]<span style="color:#66d9ef">float64</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 1. 调用原始Embedding模型获取向量</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">vectors</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ne</span>.<span style="color:#a6e22e">OriginalEmbedder</span>.<span style="color:#a6e22e">EmbedStrings</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">texts</span>, <span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 2. 对向量进行归一化</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">vectors</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">vectors</span>[<span style="color:#a6e22e">i</span>] = <span style="color:#a6e22e">NormalizeVector</span>(<span style="color:#a6e22e">v</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 3. 返回模长为1的向量</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">vectors</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>为什么要归一化？</strong></p>
+<p>归一化后，向量的模长为1，此时：</p>
+<ul>
+<li><strong>内积 = 余弦相似度</strong></li>
+<li>内积计算比余弦相似度计算更快（不需要除法）</li>
+</ul>
+<h2 id="存储文档">存储文档</h2>
+<p>将文档存入向量数据库：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">StoreEmbeddings</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">docs</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Document</span>, <span style="color:#a6e22e">indexer</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">Indexer</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ids</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">indexer</span>.<span style="color:#a6e22e">Store</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">docs</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Store %d documents, ids: %v\n&#34;</span>, len(<span style="color:#a6e22e">ids</span>), <span style="color:#a6e22e">ids</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="语义检索">语义检索</h2>
+<p>根据查询文本检索相似文档：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GetEmbeddings</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">query</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">CollectName</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">client</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Client</span>, <span style="color:#a6e22e">indexer</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant_indexer</span>.<span style="color:#a6e22e">Indexer</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Document</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">scoreThresh</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0.3</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">retriever</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qdrant_retriever</span>.<span style="color:#a6e22e">NewRetriever</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">qdrant_retriever</span>.<span style="color:#a6e22e">Config</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Client</span>:        <span style="color:#a6e22e">client</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Embedding</span>:     <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">NormalizedEmbedder</span>{<span style="color:#a6e22e">OriginalEmbedder</span>: <span style="color:#a6e22e">Embeddder</span>},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">TopK</span>:          <span style="color:#ae81ff">20</span>,            <span style="color:#75715e">// 返回最相似的20个文档</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ScoreThreshold</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">scoreThresh</span>, <span style="color:#75715e">// 相似度阈值</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Collection</span>:    <span style="color:#a6e22e">CollectName</span>,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 执行检索，并添加过滤条件</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">neighbors</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">retriever</span>.<span style="color:#a6e22e">Retrieve</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">query</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">qdrant_retriever</span>.<span style="color:#a6e22e">WithFilter</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Filter</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Must</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Condition</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">NewMatch</span>(<span style="color:#e6db74">&#34;metadata.source&#34;</span>, <span style="color:#e6db74">&#34;sohu&#34;</span>), <span style="color:#75715e">// 只返回source为sohu的文档</span>
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		}),
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">neighbors</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>过滤条件的作用：</strong></p>
+<p>在实际应用中，我们经常需要在向量搜索的同时进行元数据过滤。例如：</p>
+<ul>
+<li>只搜索特定来源的文档</li>
+<li>只搜索特定时间段的文档</li>
+<li>只搜索特定用户有权访问的文档</li>
+</ul>
+<p>Qdrant支持先过滤再搜索，效率很高。</p>
+<h1 id="完整示例">完整示例</h1>
+<h2 id="测试代码">测试代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestGetEmbeddings</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 准备测试文档</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">docs</span> <span style="color:#f92672">:=</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Document</span>{
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ID</span>:      <span style="color:#a6e22e">uuid</span>.<span style="color:#a6e22e">NewString</span>(),
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一...&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">MetaData</span>: <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">any</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#e6db74">&#34;source&#34;</span>: <span style="color:#e6db74">&#34;sohu&#34;</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ID</span>:      <span style="color:#a6e22e">uuid</span>.<span style="color:#a6e22e">NewString</span>(),
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;美国平均退休年龄：66.33岁&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">MetaData</span>: <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">any</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#e6db74">&#34;source&#34;</span>: <span style="color:#e6db74">&#34;sina&#34;</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ID</span>:      <span style="color:#a6e22e">uuid</span>.<span style="color:#a6e22e">NewString</span>(),
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;美国平均退休年龄：66.33岁&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">MetaData</span>: <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">any</span>{
+</span></span><span style="display:flex;"><span>				<span style="color:#e6db74">&#34;source&#34;</span>: <span style="color:#e6db74">&#34;sohu&#34;</span>,
+</span></span><span style="display:flex;"><span>			},
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 初始化</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">NewEmbedder</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">client</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewQdrantClient</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">indexer</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewQdrantIndexer</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">client</span>)
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 存储文档</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">StoreEmbeddings</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">docs</span>, <span style="color:#a6e22e">indexer</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 语义检索</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">docreturn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">GetEmbeddings</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#e6db74">&#34;美国多少岁可以退休？&#34;</span>, <span style="color:#e6db74">&#34;test_collection&#34;</span>, <span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">indexer</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;GetEmbeddings failed: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 输出结果</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">doc</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">docreturn</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%d  %.4f  %s\n&#34;</span>, <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">doc</span>.<span style="color:#a6e22e">Score</span>(), <span style="color:#a6e22e">doc</span>.<span style="color:#a6e22e">Content</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="运行结果">运行结果</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestGetEmbeddings ./rag/
+</span></span></code></pre></div><p>输出：</p>
+<pre tabindex="0"><code>=== RUN   TestGetEmbeddings
+Store 3 documents, ids: [49d45bf9-d731-4747-bab3-beed8da245b9 adba8c24-ceb0-4b7a-8f6e-21c6e78c0da9 27aab4dc-7061-469d-89cb-3cefe8189cba]
+    index_test.go:45: StoreEmbeddings success
+    index_test.go:50: 返回文档数量: 2
+0  0.7797  美国平均退休年龄：66.33岁
+1  0.7164  美国9个国家公共假日，元旦：1月1日；马丁路德金日：一月的第三个星期一...
+--- PASS: TestGetEmbeddings (1.02s)
+PASS
+</code></pre><h2 id="结果分析">结果分析</h2>
+<table>
+  <thead>
+      <tr>
+          <th>排名</th>
+          <th>相似度</th>
+          <th>文档内容</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>0.7797</td>
+          <td>美国平均退休年龄：66.33岁</td>
+          <td>最相关，直接回答了问题</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>0.7164</td>
+          <td>美国9个国家公共假日&hellip;</td>
+          <td>次相关，都是美国相关信息</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>关键观察：</strong></p>
+<ol>
+<li><strong>语义理解正确</strong>：查询&quot;美国多少岁可以退休？&quot;，最相似的是&quot;美国平均退休年龄：66.33岁&quot;，语义完全匹配</li>
+<li><strong>过滤生效</strong>：虽然存储了3篇文档，但只返回了2篇（过滤条件是source=sohu）</li>
+<li><strong>相似度排序</strong>：结果按相似度从高到低排序</li>
+</ol>
+<h1 id="架构图">架构图</h1>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────┐
+│                        RAG检索流程                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  用户查询                                                    │
+│  &#34;美国多少岁可以退休？&#34;                                       │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌─────────────┐                                            │
+│  │  Embedder   │  文本 → 向量                               │
+│  │ (归一化)    │  [0.12, 0.34, -0.56, ...]                  │
+│  └─────────────┘                                            │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌─────────────┐                                            │
+│  │   Qdrant    │  向量相似度搜索 + 元数据过滤                │
+│  │  Retriever  │                                            │
+│  └─────────────┘                                            │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌─────────────┐                                            │
+│  │ 返回结果    │  按相似度排序的文档列表                      │
+│  │  - Doc1     │  0.7797  美国平均退休年龄                   │
+│  │  - Doc2     │  0.7164  美国公共假日                       │
+│  └─────────────┘                                            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre><h1 id="性能优化建议">性能优化建议</h1>
+<h2 id="1-向量归一化">1. 向量归一化</h2>
+<p>使用内积距离时，确保向量已归一化：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 归一化后，内积 = 余弦相似度</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">Distance</span>: <span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Distance_Dot</span>
+</span></span></code></pre></div><h2 id="2-合理设置topk">2. 合理设置TopK</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">TopK</span>: <span style="color:#ae81ff">20</span>,  <span style="color:#75715e">// 根据实际需求调整，不是越大越好</span>
+</span></span></code></pre></div><p>TopK过大：</p>
+<ul>
+<li>返回结果中可能包含不相关内容</li>
+<li>后续LLM处理的token消耗增加</li>
+</ul>
+<p>TopK过小：</p>
+<ul>
+<li>可能遗漏相关内容</li>
+</ul>
+<h2 id="3-设置相似度阈值">3. 设置相似度阈值</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">scoreThresh</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0.3</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">ScoreThreshold</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">scoreThresh</span>,
+</span></span></code></pre></div><p>过滤掉相似度过低的文档，提高结果质量。</p>
+<h2 id="4-使用元数据过滤">4. 使用元数据过滤</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">qdrant_retriever</span>.<span style="color:#a6e22e">WithFilter</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Filter</span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Must</span>: []<span style="color:#f92672">*</span><span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">Condition</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">qdrant</span>.<span style="color:#a6e22e">NewMatch</span>(<span style="color:#e6db74">&#34;metadata.source&#34;</span>, <span style="color:#e6db74">&#34;sohu&#34;</span>),
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>})
+</span></span></code></pre></div><p>先过滤再搜索，减少搜索范围，提高效率。</p></section>
+
+  
+  
+  <div class="paginator">
+    
+    <a class="prev" href="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M9.94496 9C9.28897 9.61644 7.63215 10.997 6.04814 11.7966C5.98257 11.8297 5.98456 11.9753 6.05061 12.0063C7.05496 12.4779 8.92941 13.9264 9.94496 15M6.44444 11.9667C8.86549 12.0608 14 12 16 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span>利用RAG技术创建智能客服机器人</span></a>
+    
+    
+    <a class="next" href="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/"><span>文档的加载和转换</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

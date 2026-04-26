@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自行实现ReAct Agent</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="自行实现ReAct Agent">
+  <meta property="og:description" content="使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-04-18T21:23:00+08:00">
+    <meta property="article:modified_time" content="2026-04-18T21:23:00+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="自行实现ReAct Agent">
+  <meta name="twitter:description" content="使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "https://yinxiangpingfan.github.io/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "自行实现ReAct Agent",
+      "item": "https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "自行实现ReAct Agent",
+  "name": "自行实现ReAct Agent",
+  "description": "使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent\n什么是ReAct Agent ReAct Agent（推理-行动代理）是一种更智能的Agent模式，它通过\"思考-行动-观察\"的循环来解决问题：\n思考（Reasoning）：ChatModel分析问题，决定下一步行动 行动（Action）：如果需要，调用工具获取信息 观察（Observation）：将工具结果反馈给ChatModel 循环：重复上述过程直到得到最终答案 ReAct vs Chain 特性 Chain Agent ReAct Agent 调用次数 固定（2次ChatModel） 动态（可能多次循环） 执行流程 线性，不可变 循环，根据条件动态决定 适用场景 简单任务 复杂推理任务 实现复杂度 简单 稍复杂（需要分支和循环） 架构设计 ┌─────────────────────────────────────────────────────────────┐ │ ReAct Agent 架构 │ ├─────────────────────────────────────────────────────────────┤ │ │ │ [START] │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ ChatModel │◀─────────────────────────────┐ │ │ └─────────────┘ │ │ │ │ │ │ │ │ 有ToolCalls? │ │ │ ├─────┴─────┐ │ │ │ │ │ │ │ │ YES NO │ │ │ │ │ │ │ │ ▼ ▼ │ │ │ ┌──────┐ [END] │ │ │ │ Tool │ │ │ │ └──────┘ │ │ │ │ │ │ │ ▼ │ │ │ ┌─────────────┐ │ │ │ │ HistoryNode │────────────────────────────┘ │ │ └─────────────┘ │ │ │ └─────────────────────────────────────────────────────────────┘ 关键设计：\n分支判断：ChatModel的输出决定下一步\n有ToolCalls → 走Tool节点 无ToolCalls → 走END 循环机制：Tool → HistoryNode → ChatModel，形成循环\n状态管理：通过图状态维护对话历史\n代码实现 定义图状态 type HistoryMessage struct { History []*schema.Message // 历史消息 SystemMessage string // 系统消息 UserMessage string // 用户消息 } 创建ChatModel和工具 // 创建ChatModel config := config.NewConfig(\"../config/config.json\") model, _ := openai.NewChatModel(ctx, \u0026openai.ChatModelConfig{ APIKey: config.APIKey, Model: config.Model, BaseURL: config.Url, }) // 创建工具 timeTool := tools.NewTimeTool() // 获取时间 poemTool := tools.NewSayTool() // 获取古诗 tools := []tool.BaseTool{timeTool, poemTool} // 绑定工具到ChatModel toolInfos := make([]*schema.ToolInfo, 0, len(tools)) for _, tool := range tools { toolInfo, _ := tool.Info(ctx) toolInfos = append(toolInfos, toolInfo) } model.BindTools(toolInfos) 创建图 初始化图和状态 graph := compose.NewGraph[[]*schema.Message, *schema.Message]( compose.WithGenLocalState(func(ctx context.Context) *HistoryMessage { return \u0026HistoryMessage{ History: make([]*schema.Message, 0, 4), UserMessage: \"\", SystemMessage: \"\", } }), ) 添加节点 // 历史消息管理节点 historyNode := compose.InvokableLambda( func(ctx context.Context, input []*schema.Message) ([]*schema.Message, error) { return // 逻辑通过图状态实现 }, ) graph.AddLambdaNode(\"history_node\", historyNode, compose.WithStatePostHandler( func(ctx context.Context, out []*schema.Message, state *HistoryMessage) ([]*schema.Message, error) { result := []*schema.Message{ {Role: schema.System, Content: state.SystemMessage}, } result = append(result, state.History...) return result, nil }, )) // ChatModel节点 graph.AddChatModelNode(\"chatmodel\", model, compose.WithStatePreHandler(func(ctx context.Context, input []*schema.Message, state *HistoryMessage) ([]*schema.Message, error) { // 提取系统消息和用户消息 for _, msg := range input { if msg.Role == schema.System { state.SystemMessage = msg.Content } else if msg.Role == schema.User { state.UserMessage = msg.Content } } return input, nil }), compose.WithStatePostHandler(func(ctx context.Context, output *schema.Message, state *HistoryMessage) (*schema.Message, error) { // 将模型输出加入历史 state.History = append(state.History, output) return output, nil })) // 工具节点 toolsNode, _ := compose.NewToolNode(ctx, \u0026compose.ToolsNodeConfig{ Tools: tools, }) graph.AddToolsNode(\"tool\", toolsNode, compose.WithStatePostHandler(func(ctx context.Context, out []*schema.Message, state *HistoryMessage) ([]*schema.Message, error) { // 将工具输出加入历史 state.History = append(state.History, out...) return out, nil })) 连接节点 // 开始到ChatModel graph.AddEdge(compose.START, \"chatmodel\") // Tool到HistoryNode graph.AddEdge(\"tool\", \"history_node\") // HistoryNode到ChatModel（形成循环） graph.AddEdge(\"history_node\", \"chatmodel\") // ChatModel的分支判断 graph.AddBranch(\"chatmodel\", compose.NewGraphBranch( func(ctx context.Context, in *schema.Message) (string, error) { if len(in.ToolCalls) \u003e 0 { return \"tool\", nil // 有工具调用，走Tool节点 } return compose.END, nil // 无工具调用，结束 }, map[string]bool{ \"tool\": true, compose.END: true, }, )) 编译和运行 编译图 runnable, err := graph.Compile(ctx) if err != nil { log.Fatal(err) } 非流式调用 input := []*schema.Message{ {Role: schema.User, Content: \"我在泰国可以告诉我几点了吗，并且和我说和节日有关的古诗？\"}, } msg, err := runnable.Invoke(ctx, input) if err != nil { log.Fatal(err) } fmt.Println(msg.Content) 完整示例 测试代码 func TestReact(t *testing.T) { BuildRagWithGraph() } 运行结果 go test -v -run TestReact ./agent/ 输出：\n=== RUN TestReact 【非流式输出】 根据查询结果： ## 🕐 时间信息 当前曼谷时区的时间是：**2026年4月18日 21:23:17** ## 📜 节日古诗词 为您推荐一首关于中秋节的诗句： \u003e **\"好时节，愿得年年，常见中秋月。\"** \u003e — 徐有贞《中秋月·中秋月》 这句诗描绘了中秋佳节的美好时刻，表达了希望每年都能欣赏到中秋明月的美好愿望。 --- PASS: TestReact (7.57s) PASS 执行流程分析 第1轮循环： ChatModel ↓ 思考：用户需要时间和古诗，我要调用工具 ↓ ToolCalls: [get_time, get_quote] Tool ↓ 执行：get_time(\"Asia/Bangkok\") + get_quote(\"jieri\") ↓ 结果：时间 + 古诗 HistoryNode ↓ 更新历史：[用户问题, ToolCalls, 工具结果] 第2轮循环： ChatModel ↓ 观察：工具返回了时间和古诗 ↓ 思考：我现在可以回答用户的问题了 ↓ 无ToolCalls END ↓ 输出最终答案 关键观察：\n动态循环：根据ToolCalls的存在与否，决定是否继续循环 历史管理：每轮对话的历史都被完整保存 条件分支：ChatModel的输出决定执行路径 关键技术点 1. 分支判断 通过ToolCalls判断是否需要继续：\ngraph.AddBranch(\"chatmodel\", compose.NewGraphBranch( func(ctx context.Context, in *schema.Message) (string, error) { if len(in.ToolCalls) \u003e 0 { return \"tool\", nil } return compose.END, nil }, map[string]bool{\"tool\": true, compose.END: true}, )) 2. 循环机制 通过边和分支实现循环：\nchatmodel → tool → history_node → chatmodel → ... 3. 状态传递 每轮循环都更新历史：\n// ChatModel输出加入历史 state.History = append(state.History, output) // Tool输出加入历史 state.History = append(state.History, out...) 4. 多工具支持 模型可以同时调用多个工具：\n// out是[]*schema.Message，可能包含多个工具的结果 state.History = append(state.History, out...) ReAct循环详解 思考-行动-观察 ┌─────────────────────────────────────────────────────────────┐ │ ReAct循环过程 │ ├─────────────────────────────────────────────────────────────┤ │ │ │ 第1轮： │ │ ┌─────────────┐ │ │ │ 思考 │ \"我需要知道泰国时间和节日古诗\" │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ 行动 │ 调用 get_time + get_quote │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ 观察 │ 时间: 21:23:17, 古诗: \"好时节...\" │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ 第2轮： │ │ ┌─────────────┐ │ │ │ 思考 │ \"我已经有了所有信息，可以回答了\" │ │ └─────────────┘ │ │ │ │ │ ▼ │ │ ┌─────────────┐ │ │ │ 最终答案 │ 输出完整回答 │ │ └─────────────┘ │ │ │ └─────────────────────────────────────────────────────────────┘ 循环次数控制 ReAct Agent的循环次数取决于：\n任务复杂度：简单任务可能1轮就完成 工具结果：工具返回的信息是否足够 模型判断：模型决定何时停止调用工具 对比Chain Agent 代码差异 Chain Agent // 固定顺序：chatmodel1 → tool → history_node → chatmodel2 graph.AddEdge(compose.START, \"chatmodel1\") graph.AddEdge(\"chatmodel1\", \"tool\") graph.AddEdge(\"tool\", \"history_node\") graph.AddEdge(\"history_node\", \"chatmodel2\") graph.AddEdge(\"chatmodel2\", compose.END) ReAct Agent // 动态循环：chatmodel → tool → history_node → chatmodel → ... graph.AddEdge(compose.START, \"chatmodel\") graph.AddEdge(\"tool\", \"history_node\") graph.AddEdge(\"history_node\", \"chatmodel\") graph.AddBranch(\"chatmodel\", ...) // 动态判断 执行差异 场景 Chain Agent ReAct Agent 简单问题 2次ChatModel 1次ChatModel 复杂问题 2次ChatModel（可能不够） 多次循环直到完成 不需要工具 仍然调用Tool 直接返回答案 ",
+  "wordCount" : "792",
+  "inLanguage": "zh",
+  "datePublished": "2026-04-18T21:23:00+08:00",
+  "dateModified": "2026-04-18T21:23:00+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>自行实现ReAct Agent</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年4月18日&nbsp;· 792 字&nbsp;· 4 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#react-vs-chain">ReAct vs Chain</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#定义图状态">定义图状态</a></li>
+    <li><a href="#创建chatmodel和工具">创建ChatModel和工具</a></li>
+    <li><a href="#创建图">创建图</a>
+      <ul>
+        <li><a href="#初始化图和状态">初始化图和状态</a></li>
+        <li><a href="#添加节点">添加节点</a></li>
+        <li><a href="#连接节点">连接节点</a></li>
+      </ul>
+    </li>
+    <li><a href="#编译和运行">编译和运行</a>
+      <ul>
+        <li><a href="#编译图">编译图</a></li>
+        <li><a href="#非流式调用">非流式调用</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#测试代码">测试代码</a></li>
+    <li><a href="#运行结果">运行结果</a></li>
+    <li><a href="#执行流程分析">执行流程分析</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#1-分支判断">1. 分支判断</a></li>
+    <li><a href="#2-循环机制">2. 循环机制</a></li>
+    <li><a href="#3-状态传递">3. 状态传递</a></li>
+    <li><a href="#4-多工具支持">4. 多工具支持</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#思考-行动-观察">思考-行动-观察</a></li>
+    <li><a href="#循环次数控制">循环次数控制</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#代码差异">代码差异</a>
+      <ul>
+        <li><a href="#chain-agent">Chain Agent</a></li>
+        <li><a href="#react-agent">ReAct Agent</a></li>
+      </ul>
+    </li>
+    <li><a href="#执行差异">执行差异</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>使用Eino框架的图编排能力，自行实现一个支持动态循环的ReAct Agent</p>
+<h1 id="什么是react-agent">什么是ReAct Agent</h1>
+<p>ReAct Agent（推理-行动代理）是一种更智能的Agent模式，它通过&quot;思考-行动-观察&quot;的循环来解决问题：</p>
+<ol>
+<li><strong>思考（Reasoning）</strong>：ChatModel分析问题，决定下一步行动</li>
+<li><strong>行动（Action）</strong>：如果需要，调用工具获取信息</li>
+<li><strong>观察（Observation）</strong>：将工具结果反馈给ChatModel</li>
+<li><strong>循环</strong>：重复上述过程直到得到最终答案</li>
+</ol>
+<h2 id="react-vs-chain">ReAct vs Chain</h2>
+<table>
+  <thead>
+      <tr>
+          <th>特性</th>
+          <th>Chain Agent</th>
+          <th>ReAct Agent</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>调用次数</td>
+          <td>固定（2次ChatModel）</td>
+          <td>动态（可能多次循环）</td>
+      </tr>
+      <tr>
+          <td>执行流程</td>
+          <td>线性，不可变</td>
+          <td>循环，根据条件动态决定</td>
+      </tr>
+      <tr>
+          <td>适用场景</td>
+          <td>简单任务</td>
+          <td>复杂推理任务</td>
+      </tr>
+      <tr>
+          <td>实现复杂度</td>
+          <td>简单</td>
+          <td>稍复杂（需要分支和循环）</td>
+      </tr>
+  </tbody>
+</table>
+<h1 id="架构设计">架构设计</h1>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────┐
+│                    ReAct Agent 架构                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   [START]                                                   │
+│      │                                                      │
+│      ▼                                                      │
+│   ┌─────────────┐                                           │
+│   │  ChatModel  │◀─────────────────────────────┐            │
+│   └─────────────┘                            │            │
+│      │                                       │            │
+│      │ 有ToolCalls?                          │            │
+│      ├─────┴─────┐                          │            │
+│      │           │                          │            │
+│     YES          NO                         │            │
+│      │           │                          │            │
+│      ▼           ▼                          │            │
+│   ┌──────┐   [END]                          │            │
+│   │ Tool │                                  │            │
+│   └──────┘                                  │            │
+│      │                                       │            │
+│      ▼                                       │            │
+│   ┌─────────────┐                            │            │
+│   │ HistoryNode │────────────────────────────┘            │
+│   └─────────────┘                                          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre><p><strong>关键设计：</strong></p>
+<ol>
+<li>
+<p><strong>分支判断</strong>：ChatModel的输出决定下一步</p>
+<ul>
+<li>有ToolCalls → 走Tool节点</li>
+<li>无ToolCalls → 走END</li>
+</ul>
+</li>
+<li>
+<p><strong>循环机制</strong>：Tool → HistoryNode → ChatModel，形成循环</p>
+</li>
+<li>
+<p><strong>状态管理</strong>：通过图状态维护对话历史</p>
+</li>
+</ol>
+<h1 id="代码实现">代码实现</h1>
+<h2 id="定义图状态">定义图状态</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">HistoryMessage</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">History</span>       []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>  <span style="color:#75715e">// 历史消息</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">SystemMessage</span> <span style="color:#66d9ef">string</span>              <span style="color:#75715e">// 系统消息</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">UserMessage</span>   <span style="color:#66d9ef">string</span>              <span style="color:#75715e">// 用户消息</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="创建chatmodel和工具">创建ChatModel和工具</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 创建ChatModel</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">config</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">NewConfig</span>(<span style="color:#e6db74">&#34;../config/config.json&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">model</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">openai</span>.<span style="color:#a6e22e">NewChatModel</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">openai</span>.<span style="color:#a6e22e">ChatModelConfig</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">APIKey</span>:  <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">APIKey</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Model</span>:   <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Model</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BaseURL</span>: <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Url</span>,
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 创建工具</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">timeTool</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tools</span>.<span style="color:#a6e22e">NewTimeTool</span>()   <span style="color:#75715e">// 获取时间</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">poemTool</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tools</span>.<span style="color:#a6e22e">NewSayTool</span>()    <span style="color:#75715e">// 获取古诗</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">tools</span> <span style="color:#f92672">:=</span> []<span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">BaseTool</span>{<span style="color:#a6e22e">timeTool</span>, <span style="color:#a6e22e">poemTool</span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 绑定工具到ChatModel</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">toolInfos</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">ToolInfo</span>, <span style="color:#ae81ff">0</span>, len(<span style="color:#a6e22e">tools</span>))
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">tool</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">tools</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">toolInfo</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tool</span>.<span style="color:#a6e22e">Info</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">toolInfos</span> = append(<span style="color:#a6e22e">toolInfos</span>, <span style="color:#a6e22e">toolInfo</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">model</span>.<span style="color:#a6e22e">BindTools</span>(<span style="color:#a6e22e">toolInfos</span>)
+</span></span></code></pre></div><h2 id="创建图">创建图</h2>
+<h3 id="初始化图和状态">初始化图和状态</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraph</span>[[]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>](
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithGenLocalState</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">HistoryMessage</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">HistoryMessage</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">History</span>:       make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">4</span>),
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">UserMessage</span>:   <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">SystemMessage</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}),
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><h3 id="添加节点">添加节点</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 历史消息管理节点</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">historyNode</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>(
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#75715e">// 逻辑通过图状态实现</span>
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;history_node&#34;</span>, <span style="color:#a6e22e">historyNode</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">out</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HistoryMessage</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">result</span> <span style="color:#f92672">:=</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>{
+</span></span><span style="display:flex;"><span>				{<span style="color:#a6e22e">Role</span>: <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">System</span>, <span style="color:#a6e22e">Content</span>: <span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">SystemMessage</span>},
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">result</span> = append(<span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">result</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ChatModel节点</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddChatModelNode</span>(<span style="color:#e6db74">&#34;chatmodel&#34;</span>, <span style="color:#a6e22e">model</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePreHandler</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HistoryMessage</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 提取系统消息和用户消息</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">msg</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">input</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Role</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">System</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">SystemMessage</span> = <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Content</span>
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Role</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">User</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">UserMessage</span> = <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Content</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">input</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">output</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HistoryMessage</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 将模型输出加入历史</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span> = append(<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span>, <span style="color:#a6e22e">output</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">output</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 工具节点</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">toolsNode</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewToolNode</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">ToolsNodeConfig</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Tools</span>: <span style="color:#a6e22e">tools</span>,
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddToolsNode</span>(<span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#a6e22e">toolsNode</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">WithStatePostHandler</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">out</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#a6e22e">state</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HistoryMessage</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 将工具输出加入历史</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span> = append(<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span>, <span style="color:#a6e22e">out</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">out</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}))
+</span></span></code></pre></div><h3 id="连接节点">连接节点</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 开始到ChatModel</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;chatmodel&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Tool到HistoryNode</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#e6db74">&#34;history_node&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// HistoryNode到ChatModel（形成循环）</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;history_node&#34;</span>, <span style="color:#e6db74">&#34;chatmodel&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ChatModel的分支判断</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;chatmodel&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraphBranch</span>(
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">in</span>.<span style="color:#a6e22e">ToolCalls</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#66d9ef">nil</span>  <span style="color:#75715e">// 有工具调用，走Tool节点</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>, <span style="color:#66d9ef">nil</span>  <span style="color:#75715e">// 无工具调用，结束</span>
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#e6db74">&#34;tool&#34;</span>: <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>: <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>))
+</span></span></code></pre></div><h2 id="编译和运行">编译和运行</h2>
+<h3 id="编译图">编译图</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">runnable</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">Compile</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="非流式调用">非流式调用</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>{
+</span></span><span style="display:flex;"><span>	{<span style="color:#a6e22e">Role</span>: <span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">User</span>, <span style="color:#a6e22e">Content</span>: <span style="color:#e6db74">&#34;我在泰国可以告诉我几点了吗，并且和我说和节日有关的古诗？&#34;</span>},
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Content</span>)
+</span></span></code></pre></div><h1 id="完整示例">完整示例</h1>
+<h2 id="测试代码">测试代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestReact</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BuildRagWithGraph</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="运行结果">运行结果</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestReact ./agent/
+</span></span></code></pre></div><p>输出：</p>
+<pre tabindex="0"><code>=== RUN   TestReact
+【非流式输出】
+
+根据查询结果：
+
+## 🕐 时间信息
+当前曼谷时区的时间是：**2026年4月18日 21:23:17**
+
+## 📜 节日古诗词
+为您推荐一首关于中秋节的诗句：
+
+&gt; **&#34;好时节，愿得年年，常见中秋月。&#34;**
+&gt; — 徐有贞《中秋月·中秋月》
+
+这句诗描绘了中秋佳节的美好时刻，表达了希望每年都能欣赏到中秋明月的美好愿望。
+--- PASS: TestReact (7.57s)
+PASS
+</code></pre><h2 id="执行流程分析">执行流程分析</h2>
+<pre tabindex="0"><code>第1轮循环：
+  ChatModel
+    ↓ 思考：用户需要时间和古诗，我要调用工具
+    ↓ ToolCalls: [get_time, get_quote]
+  Tool
+    ↓ 执行：get_time(&#34;Asia/Bangkok&#34;) + get_quote(&#34;jieri&#34;)
+    ↓ 结果：时间 + 古诗
+  HistoryNode
+    ↓ 更新历史：[用户问题, ToolCalls, 工具结果]
+    
+第2轮循环：
+  ChatModel
+    ↓ 观察：工具返回了时间和古诗
+    ↓ 思考：我现在可以回答用户的问题了
+    ↓ 无ToolCalls
+  END
+    ↓ 输出最终答案
+</code></pre><p><strong>关键观察：</strong></p>
+<ol>
+<li><strong>动态循环</strong>：根据ToolCalls的存在与否，决定是否继续循环</li>
+<li><strong>历史管理</strong>：每轮对话的历史都被完整保存</li>
+<li><strong>条件分支</strong>：ChatModel的输出决定执行路径</li>
+</ol>
+<h1 id="关键技术点">关键技术点</h1>
+<h2 id="1-分支判断">1. 分支判断</h2>
+<p>通过<code>ToolCalls</code>判断是否需要继续：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;chatmodel&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraphBranch</span>(
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">schema</span>.<span style="color:#a6e22e">Message</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">in</span>.<span style="color:#a6e22e">ToolCalls</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{<span style="color:#e6db74">&#34;tool&#34;</span>: <span style="color:#66d9ef">true</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>: <span style="color:#66d9ef">true</span>},
+</span></span><span style="display:flex;"><span>))
+</span></span></code></pre></div><h2 id="2-循环机制">2. 循环机制</h2>
+<p>通过边和分支实现循环：</p>
+<pre tabindex="0"><code>chatmodel → tool → history_node → chatmodel → ...
+</code></pre><h2 id="3-状态传递">3. 状态传递</h2>
+<p>每轮循环都更新历史：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// ChatModel输出加入历史</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span> = append(<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span>, <span style="color:#a6e22e">output</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Tool输出加入历史</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span> = append(<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span>, <span style="color:#a6e22e">out</span><span style="color:#f92672">...</span>)
+</span></span></code></pre></div><h2 id="4-多工具支持">4. 多工具支持</h2>
+<p>模型可以同时调用多个工具：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// out是[]*schema.Message，可能包含多个工具的结果</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span> = append(<span style="color:#a6e22e">state</span>.<span style="color:#a6e22e">History</span>, <span style="color:#a6e22e">out</span><span style="color:#f92672">...</span>)
+</span></span></code></pre></div><h1 id="react循环详解">ReAct循环详解</h1>
+<h2 id="思考-行动-观察">思考-行动-观察</h2>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────┐
+│                    ReAct循环过程                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   第1轮：                                                   │
+│   ┌─────────────┐                                           │
+│   │   思考      │  &#34;我需要知道泰国时间和节日古诗&#34;            │
+│   └─────────────┘                                           │
+│         │                                                   │
+│         ▼                                                   │
+│   ┌─────────────┐                                           │
+│   │   行动      │  调用 get_time + get_quote                │
+│   └─────────────┘                                           │
+│         │                                                   │
+│         ▼                                                   │
+│   ┌─────────────┐                                           │
+│   │   观察      │  时间: 21:23:17, 古诗: &#34;好时节...&#34;        │
+│   └─────────────┘                                           │
+│         │                                                   │
+│         ▼                                                   │
+│   第2轮：                                                   │
+│   ┌─────────────┐                                           │
+│   │   思考      │  &#34;我已经有了所有信息，可以回答了&#34;          │
+│   └─────────────┘                                           │
+│         │                                                   │
+│         ▼                                                   │
+│   ┌─────────────┐                                           │
+│   │  最终答案   │  输出完整回答                              │
+│   └─────────────┘                                           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre><h2 id="循环次数控制">循环次数控制</h2>
+<p>ReAct Agent的循环次数取决于：</p>
+<ol>
+<li><strong>任务复杂度</strong>：简单任务可能1轮就完成</li>
+<li><strong>工具结果</strong>：工具返回的信息是否足够</li>
+<li><strong>模型判断</strong>：模型决定何时停止调用工具</li>
+</ol>
+<h1 id="对比chain-agent">对比Chain Agent</h1>
+<h2 id="代码差异">代码差异</h2>
+<h3 id="chain-agent">Chain Agent</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 固定顺序：chatmodel1 → tool → history_node → chatmodel2</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;chatmodel1&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;chatmodel1&#34;</span>, <span style="color:#e6db74">&#34;tool&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#e6db74">&#34;history_node&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;history_node&#34;</span>, <span style="color:#e6db74">&#34;chatmodel2&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;chatmodel2&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span></code></pre></div><h3 id="react-agent">ReAct Agent</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 动态循环：chatmodel → tool → history_node → chatmodel → ...</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;chatmodel&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;tool&#34;</span>, <span style="color:#e6db74">&#34;history_node&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;history_node&#34;</span>, <span style="color:#e6db74">&#34;chatmodel&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;chatmodel&#34;</span>, <span style="color:#f92672">...</span>)  <span style="color:#75715e">// 动态判断</span>
+</span></span></code></pre></div><h2 id="执行差异">执行差异</h2>
+<table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>Chain Agent</th>
+          <th>ReAct Agent</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>简单问题</td>
+          <td>2次ChatModel</td>
+          <td>1次ChatModel</td>
+      </tr>
+      <tr>
+          <td>复杂问题</td>
+          <td>2次ChatModel（可能不够）</td>
+          <td>多次循环直到完成</td>
+      </tr>
+      <tr>
+          <td>不需要工具</td>
+          <td>仍然调用Tool</td>
+          <td>直接返回答案</td>
+      </tr>
+  </tbody>
+</table></section>
+
+  
+  
+  <div class="paginator">
+    
+    
+    <a class="next" href="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/"><span>自行实现ChainAgent</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

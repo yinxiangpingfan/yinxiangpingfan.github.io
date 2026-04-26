@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图的构建</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="图的构建">
+  <meta property="og:description" content="使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="agent">
+    <meta property="article:published_time" content="2026-04-18T14:15:00+08:00">
+    <meta property="article:modified_time" content="2026-04-18T14:15:00+08:00">
+    <meta property="article:tag" content="Agent">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="图的构建">
+  <meta name="twitter:description" content="使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Agents",
+      "item": "https://yinxiangpingfan.github.io/agent/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "图的构建",
+      "item": "https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "图的构建",
+  "name": "图的构建",
+  "description": "使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排\n",
+  "keywords": [
+    "agent", "golang"
+  ],
+  "articleBody": "使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排\n什么是图编排 在构建AI应用时，我们经常需要将多个处理步骤组合成一个工作流。图编排（Graph Orchestration）是一种将任务节点通过边连接成有向图的方式，可以：\n表达复杂流程：支持分支、并行、循环等复杂逻辑 类型安全：编译时检查节点间的数据类型是否匹配 可视化：图的拓扑结构清晰，便于理解和调试 核心概念 节点（Node） 节点是图中的处理单元，每个节点接收输入并产生输出。\n边（Edge） 边定义了节点之间的执行顺序：\n普通边：固定从一个节点到另一个节点 分支边：根据条件选择下一个节点 图（Graph） 图是节点和边的容器，定义了整个工作流的拓扑结构。\n架构图 代码实现 依赖安装 go get github.com/cloudwego/eino/compose 定义数据类型 首先定义图中流转的数据类型：\npackage enio_graph // 输入类型 type TA struct { Data string } // 中间类型 type TB struct { Data int } type TC struct { Data float64 } // 输出类型 type TD struct { Data bool } 创建节点 使用compose.InvokableLambda创建Lambda节点：\nimport ( \"context\" \"github.com/cloudwego/eino/compose\" ) // node1: 将字符串长度转为整数 node1 := compose.InvokableLambda[*TA, *TB](func(ctx context.Context, req *TA) (*TB, error) { return \u0026TB{Data: len(req.Data)}, nil }) // node2: 将整数转为浮点数 node2 := compose.InvokableLambda[*TB, *TC](func(ctx context.Context, req *TB) (*TC, error) { return \u0026TC{Data: float64(req.Data)}, nil }) // node3: 判断整数是否大于5 node3 := compose.InvokableLambda[*TB, *TD](func(ctx context.Context, req *TB) (*TD, error) { return \u0026TD{Data: req.Data \u003e 5}, nil }) // node4: 判断浮点数是否小于等于5 node4 := compose.InvokableLambda[*TC, *TD](func(ctx context.Context, input *TC) (output *TD, err error) { return \u0026TD{input.Data \u003c= 5}, nil }) 构建图 创建图实例 // 创建图，指定输入类型*TA，输出类型*TD graph := compose.NewGraph[*TA, *TD]() 添加节点 graph.AddLambdaNode(\"node1\", node1) graph.AddLambdaNode(\"node2\", node2) graph.AddLambdaNode(\"node3\", node3) graph.AddLambdaNode(\"node4\", node4) 添加普通边 // 从START到node1 graph.AddEdge(compose.START, \"node1\") // node2到node4 graph.AddEdge(\"node2\", \"node4\") // node3到END graph.AddEdge(\"node3\", compose.END) // node4到END graph.AddEdge(\"node4\", compose.END) 添加分支边 分支边根据条件动态选择下一个节点：\ngraph.AddBranch(\"node1\", compose.NewGraphBranch[*TB]( func(ctx context.Context, in *TB) (string, error) { // 根据数据奇偶性选择分支 if in.Data%2 == 0 { return \"node2\", nil // 偶数走node2 } else { return \"node3\", nil // 奇数走node3 } }, map[string]bool{ \"node2\": true, // 声明所有可能的目标节点 \"node3\": true, }, )) 编译和运行 编译图 编译时检查节点间数据类型是否匹配：\nrunnable, err := graph.Compile(ctx) if err != nil { log.Fatal(err) } 运行图 input := \u0026TA{Data: \"hello, how are you\"} result, err := runnable.Invoke(ctx, input) if err != nil { log.Fatal(err) } fmt.Println(result.Data) // 输出: false 或 true 完整示例 完整代码 package enio_graph import ( \"context\" \"fmt\" \"log\" \"github.com/cloudwego/eino/compose\" ) func BuildGraph(msg string) { ctx := context.Background() // 构建节点 node1 := compose.InvokableLambda[*TA, *TB](func(ctx context.Context, req *TA) (*TB, error) { return \u0026TB{Data: len(req.Data)}, nil }) node2 := compose.InvokableLambda[*TB, *TC](func(ctx context.Context, req *TB) (*TC, error) { return \u0026TC{Data: float64(req.Data)}, nil }) node3 := compose.InvokableLambda[*TB, *TD](func(ctx context.Context, req *TB) (*TD, error) { return \u0026TD{Data: req.Data \u003e 5}, nil }) node4 := compose.InvokableLambda[*TC, *TD](func(ctx context.Context, input *TC) (output *TD, err error) { return \u0026TD{input.Data \u003c= 5}, nil }) // 构建图 graph := compose.NewGraph[*TA, *TD]() graph.AddLambdaNode(\"node1\", node1) graph.AddLambdaNode(\"node2\", node2) graph.AddLambdaNode(\"node3\", node3) graph.AddLambdaNode(\"node4\", node4) // 添加边 graph.AddEdge(compose.START, \"node1\") graph.AddEdge(\"node2\", \"node4\") graph.AddEdge(\"node3\", compose.END) graph.AddEdge(\"node4\", compose.END) // 添加分支 graph.AddBranch(\"node1\", compose.NewGraphBranch[*TB]( func(ctx context.Context, in *TB) (string, error) { if in.Data%2 == 0 { return \"node2\", nil } else { return \"node3\", nil } }, map[string]bool{\"node2\": true, \"node3\": true}, )) // 编译 runnable, err := graph.Compile(ctx) if err != nil { log.Fatal(err) } // 运行 input := \u0026TA{msg} result, err := runnable.Invoke(ctx, input) if err != nil { log.Fatal(err) } fmt.Println(result.Data) } 测试代码 func TestComposeGraph(t *testing.T) { BuildGraph(\"hello, how are you\") // 长度19，奇数 BuildGraph(\"hello, how are you!\") // 长度20，偶数 } 运行结果 go test -v -run TestComposeGraph ./enio_graph/ 输出：\n=== RUN TestComposeGraph false true --- PASS: TestComposeGraph (0.00s) PASS 结果分析 输入 长度 奇偶性 执行路径 输出 “hello, how are you” 19 奇数 node1 → node3 → END true (19 \u003e 5) “hello, how are you!” 20 偶数 node1 → node2 → node4 → END false (20.0 \u003c= 5) 执行流程详解：\n第一个输入（长度19）：\nnode1: 计算长度 = 19 分支判断: 19%2=1（奇数）→ 走node3 node3: 19 \u003e 5 → 返回true 第二个输入（长度20）：\nnode1: 计算长度 = 20 分支判断: 20%2=0（偶数）→ 走node2 node2: 转为浮点数 20.0 node4: 20.0 \u003c= 5 → 返回false 关键特性 类型安全 编译时检查上下游节点的数据类型：\nnode1: *TA → *TB node2: *TB → *TC ✓ 输入*TB与node1输出匹配 node3: *TB → *TD ✓ 输入*TB与node1输出匹配 node4: *TC → *TD ✓ 输入*TC与node2输出匹配 如果类型不匹配，编译时会报错。\n分支条件 分支函数根据输入动态选择路径：\nfunc(ctx context.Context, in *TB) (string, error) { // 返回下一个节点的名称 if condition { return \"nodeA\", nil } return \"nodeB\", nil } 声明式目标 在AddBranch中必须声明所有可能的目标节点：\nmap[string]bool{ \"node2\": true, \"node3\": true, } 这确保了编译器能够进行完整的类型检查。\n应用场景 1. 数据处理管道 输入 → 验证 → 转换 → 格式化 → 输出 2. AI Agent工作流 用户问题 → 意图识别 ──┬── 信息检索 → 生成回答 └── 工具调用 → 返回结果 3. 条件分支处理 输入数据 → 分类 ──┬── 类型A处理 ├── 类型B处理 └── 类型C处理 最佳实践 1. 合理划分节点 每个节点应该：\n单一职责 输入输出类型明确 可独立测试 2. 分支逻辑清晰 分支条件应该：\n互斥且完备 简单明了 避免过多分支 3. 类型设计 数据类型应该：\n语义明确 只包含必要字段 便于扩展 4. 错误处理 节点函数应该：\n返回有意义的错误 处理边界情况 记录关键日志 ",
+  "wordCount" : "658",
+  "inLanguage": "zh",
+  "datePublished": "2026-04-18T14:15:00+08:00",
+  "dateModified": "2026-04-18T14:15:00+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>图的构建</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年4月18日&nbsp;· 658 字&nbsp;· 4 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#核心概念">核心概念</a>
+      <ul>
+        <li><a href="#节点node">节点（Node）</a></li>
+        <li><a href="#边edge">边（Edge）</a></li>
+        <li><a href="#图graph">图（Graph）</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#依赖安装">依赖安装</a></li>
+    <li><a href="#定义数据类型">定义数据类型</a></li>
+    <li><a href="#创建节点">创建节点</a></li>
+    <li><a href="#构建图">构建图</a>
+      <ul>
+        <li><a href="#创建图实例">创建图实例</a></li>
+        <li><a href="#添加节点">添加节点</a></li>
+        <li><a href="#添加普通边">添加普通边</a></li>
+        <li><a href="#添加分支边">添加分支边</a></li>
+      </ul>
+    </li>
+    <li><a href="#编译和运行">编译和运行</a>
+      <ul>
+        <li><a href="#编译图">编译图</a></li>
+        <li><a href="#运行图">运行图</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#完整代码">完整代码</a></li>
+    <li><a href="#测试代码">测试代码</a></li>
+    <li><a href="#运行结果">运行结果</a></li>
+    <li><a href="#结果分析">结果分析</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#类型安全">类型安全</a></li>
+    <li><a href="#分支条件">分支条件</a></li>
+    <li><a href="#声明式目标">声明式目标</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#1-数据处理管道">1. 数据处理管道</a></li>
+    <li><a href="#2-ai-agent工作流">2. AI Agent工作流</a></li>
+    <li><a href="#3-条件分支处理">3. 条件分支处理</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#1-合理划分节点">1. 合理划分节点</a></li>
+    <li><a href="#2-分支逻辑清晰">2. 分支逻辑清晰</a></li>
+    <li><a href="#3-类型设计">3. 类型设计</a></li>
+    <li><a href="#4-错误处理">4. 错误处理</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>使用Eino框架的compose包构建复杂的有向图工作流，实现灵活的任务编排</p>
+<h1 id="什么是图编排">什么是图编排</h1>
+<p>在构建AI应用时，我们经常需要将多个处理步骤组合成一个工作流。图编排（Graph Orchestration）是一种将任务节点通过边连接成有向图的方式，可以：</p>
+<ul>
+<li><strong>表达复杂流程</strong>：支持分支、并行、循环等复杂逻辑</li>
+<li><strong>类型安全</strong>：编译时检查节点间的数据类型是否匹配</li>
+<li><strong>可视化</strong>：图的拓扑结构清晰，便于理解和调试</li>
+</ul>
+<h2 id="核心概念">核心概念</h2>
+<h3 id="节点node">节点（Node）</h3>
+<p>节点是图中的处理单元，每个节点接收输入并产生输出。</p>
+<h3 id="边edge">边（Edge）</h3>
+<p>边定义了节点之间的执行顺序：</p>
+<ul>
+<li><strong>普通边</strong>：固定从一个节点到另一个节点</li>
+<li><strong>分支边</strong>：根据条件选择下一个节点</li>
+</ul>
+<h3 id="图graph">图（Graph）</h3>
+<p>图是节点和边的容器，定义了整个工作流的拓扑结构。</p>
+<h1 id="架构图">架构图</h1>
+<p><img src="/agent/%e5%9b%be%e7%9a%84%e6%9e%84%e5%bb%ba/image.png" alt="Graph架构图" data-zoomable>
+</p>
+<h1 id="代码实现">代码实现</h1>
+<h2 id="依赖安装">依赖安装</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go get github.com/cloudwego/eino/compose
+</span></span></code></pre></div><h2 id="定义数据类型">定义数据类型</h2>
+<p>首先定义图中流转的数据类型：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">enio_graph</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 输入类型</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TA</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Data</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 中间类型</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TB</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Data</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TC</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Data</span> <span style="color:#66d9ef">float64</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 输出类型</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TD</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Data</span> <span style="color:#66d9ef">bool</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="创建节点">创建节点</h2>
+<p>使用<code>compose.InvokableLambda</code>创建Lambda节点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/compose&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node1: 将字符串长度转为整数</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">node1</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TB</span>{<span style="color:#a6e22e">Data</span>: len(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node2: 将整数转为浮点数</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">node2</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TC</span>{<span style="color:#a6e22e">Data</span>: float64(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node3: 判断整数是否大于5</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">node3</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">Data</span>: <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span> &gt; <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node4: 判断浮点数是否小于等于5</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">node4</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>) (<span style="color:#a6e22e">output</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">input</span>.<span style="color:#a6e22e">Data</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>})
+</span></span></code></pre></div><h2 id="构建图">构建图</h2>
+<h3 id="创建图实例">创建图实例</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 创建图，指定输入类型*TA，输出类型*TD</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraph</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]()
+</span></span></code></pre></div><h3 id="添加节点">添加节点</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">node1</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#a6e22e">node2</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">node3</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">node4</span>)
+</span></span></code></pre></div><h3 id="添加普通边">添加普通边</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 从START到node1</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;node1&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node2到node4</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#e6db74">&#34;node4&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node3到END</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// node4到END</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span></code></pre></div><h3 id="添加分支边">添加分支边</h3>
+<p>分支边根据条件动态选择下一个节点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraphBranch</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 根据数据奇偶性选择分支</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">in</span>.<span style="color:#a6e22e">Data</span><span style="color:#f92672">%</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#66d9ef">nil</span>  <span style="color:#75715e">// 偶数走node2</span>
+</span></span><span style="display:flex;"><span>		} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#66d9ef">nil</span>  <span style="color:#75715e">// 奇数走node3</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#e6db74">&#34;node2&#34;</span>: <span style="color:#66d9ef">true</span>,  <span style="color:#75715e">// 声明所有可能的目标节点</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#e6db74">&#34;node3&#34;</span>: <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>))
+</span></span></code></pre></div><h2 id="编译和运行">编译和运行</h2>
+<h3 id="编译图">编译图</h3>
+<p>编译时检查节点间数据类型是否匹配：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">runnable</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">Compile</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="运行图">运行图</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TA</span>{<span style="color:#a6e22e">Data</span>: <span style="color:#e6db74">&#34;hello, how are you&#34;</span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">result</span>.<span style="color:#a6e22e">Data</span>)  <span style="color:#75715e">// 输出: false 或 true</span>
+</span></span></code></pre></div><h1 id="完整示例">完整示例</h1>
+<h2 id="完整代码">完整代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">enio_graph</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/cloudwego/eino/compose&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">BuildGraph</span>(<span style="color:#a6e22e">msg</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 构建节点</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node1</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TB</span>{<span style="color:#a6e22e">Data</span>: len(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node2</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TC</span>{<span style="color:#a6e22e">Data</span>: float64(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span>)}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node3</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">Data</span>: <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Data</span> &gt; <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">node4</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">InvokableLambda</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>](<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">input</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TC</span>) (<span style="color:#a6e22e">output</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TD</span>{<span style="color:#a6e22e">input</span>.<span style="color:#a6e22e">Data</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">5</span>}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 构建图</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraph</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TA</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">TD</span>]()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">node1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#a6e22e">node2</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">node3</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddLambdaNode</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">node4</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 添加边</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">START</span>, <span style="color:#e6db74">&#34;node1&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#e6db74">&#34;node4&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddEdge</span>(<span style="color:#e6db74">&#34;node4&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">END</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 添加分支</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">AddBranch</span>(<span style="color:#e6db74">&#34;node1&#34;</span>, <span style="color:#a6e22e">compose</span>.<span style="color:#a6e22e">NewGraphBranch</span>[<span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>](
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">in</span>.<span style="color:#a6e22e">Data</span><span style="color:#f92672">%</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node2&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;node3&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{<span style="color:#e6db74">&#34;node2&#34;</span>: <span style="color:#66d9ef">true</span>, <span style="color:#e6db74">&#34;node3&#34;</span>: <span style="color:#66d9ef">true</span>},
+</span></span><span style="display:flex;"><span>	))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 编译</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">runnable</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">graph</span>.<span style="color:#a6e22e">Compile</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 运行</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">TA</span>{<span style="color:#a6e22e">msg</span>}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">runnable</span>.<span style="color:#a6e22e">Invoke</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">input</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">result</span>.<span style="color:#a6e22e">Data</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="测试代码">测试代码</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestComposeGraph</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BuildGraph</span>(<span style="color:#e6db74">&#34;hello, how are you&#34;</span>)   <span style="color:#75715e">// 长度19，奇数</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">BuildGraph</span>(<span style="color:#e6db74">&#34;hello, how are you!&#34;</span>)  <span style="color:#75715e">// 长度20，偶数</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="运行结果">运行结果</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>go test -v -run TestComposeGraph ./enio_graph/
+</span></span></code></pre></div><p>输出：</p>
+<pre tabindex="0"><code>=== RUN   TestComposeGraph
+false
+true
+--- PASS: TestComposeGraph (0.00s)
+PASS
+</code></pre><h2 id="结果分析">结果分析</h2>
+<table>
+  <thead>
+      <tr>
+          <th>输入</th>
+          <th>长度</th>
+          <th>奇偶性</th>
+          <th>执行路径</th>
+          <th>输出</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>&ldquo;hello, how are you&rdquo;</td>
+          <td>19</td>
+          <td>奇数</td>
+          <td>node1 → node3 → END</td>
+          <td>true (19 &gt; 5)</td>
+      </tr>
+      <tr>
+          <td>&ldquo;hello, how are you!&rdquo;</td>
+          <td>20</td>
+          <td>偶数</td>
+          <td>node1 → node2 → node4 → END</td>
+          <td>false (20.0 &lt;= 5)</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>执行流程详解：</strong></p>
+<ol>
+<li>
+<p><strong>第一个输入</strong>（长度19）：</p>
+<ul>
+<li>node1: 计算长度 = 19</li>
+<li>分支判断: 19%2=1（奇数）→ 走node3</li>
+<li>node3: 19 &gt; 5 → 返回true</li>
+</ul>
+</li>
+<li>
+<p><strong>第二个输入</strong>（长度20）：</p>
+<ul>
+<li>node1: 计算长度 = 20</li>
+<li>分支判断: 20%2=0（偶数）→ 走node2</li>
+<li>node2: 转为浮点数 20.0</li>
+<li>node4: 20.0 &lt;= 5 → 返回false</li>
+</ul>
+</li>
+</ol>
+<h1 id="关键特性">关键特性</h1>
+<h2 id="类型安全">类型安全</h2>
+<p>编译时检查上下游节点的数据类型：</p>
+<pre tabindex="0"><code>node1: *TA → *TB
+node2: *TB → *TC    ✓ 输入*TB与node1输出匹配
+node3: *TB → *TD    ✓ 输入*TB与node1输出匹配
+node4: *TC → *TD    ✓ 输入*TC与node2输出匹配
+</code></pre><p>如果类型不匹配，编译时会报错。</p>
+<h2 id="分支条件">分支条件</h2>
+<p>分支函数根据输入动态选择路径：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">TB</span>) (<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 返回下一个节点的名称</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">condition</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;nodeA&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;nodeB&#34;</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="声明式目标">声明式目标</h2>
+<p>在<code>AddBranch</code>中必须声明所有可能的目标节点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;node2&#34;</span>: <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;node3&#34;</span>: <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>这确保了编译器能够进行完整的类型检查。</p>
+<h1 id="应用场景">应用场景</h1>
+<h2 id="1-数据处理管道">1. 数据处理管道</h2>
+<pre tabindex="0"><code>输入 → 验证 → 转换 → 格式化 → 输出
+</code></pre><h2 id="2-ai-agent工作流">2. AI Agent工作流</h2>
+<pre tabindex="0"><code>用户问题 → 意图识别 ──┬── 信息检索 → 生成回答
+                      └── 工具调用 → 返回结果
+</code></pre><h2 id="3-条件分支处理">3. 条件分支处理</h2>
+<pre tabindex="0"><code>输入数据 → 分类 ──┬── 类型A处理
+                   ├── 类型B处理
+                   └── 类型C处理
+</code></pre><h1 id="最佳实践">最佳实践</h1>
+<h2 id="1-合理划分节点">1. 合理划分节点</h2>
+<p>每个节点应该：</p>
+<ul>
+<li>单一职责</li>
+<li>输入输出类型明确</li>
+<li>可独立测试</li>
+</ul>
+<h2 id="2-分支逻辑清晰">2. 分支逻辑清晰</h2>
+<p>分支条件应该：</p>
+<ul>
+<li>互斥且完备</li>
+<li>简单明了</li>
+<li>避免过多分支</li>
+</ul>
+<h2 id="3-类型设计">3. 类型设计</h2>
+<p>数据类型应该：</p>
+<ul>
+<li>语义明确</li>
+<li>只包含必要字段</li>
+<li>便于扩展</li>
+</ul>
+<h2 id="4-错误处理">4. 错误处理</h2>
+<p>节点函数应该：</p>
+<ul>
+<li>返回有意义的错误</li>
+<li>处理边界情况</li>
+<li>记录关键日志</li>
+</ul></section>
+
+  
+  
+  <div class="paginator">
+    
+    <a class="prev" href="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M9.94496 9C9.28897 9.61644 7.63215 10.997 6.04814 11.7966C5.98257 11.8297 5.98456 11.9753 6.05061 12.0063C7.05496 12.4779 8.92941 13.9264 9.94496 15M6.44444 11.9667C8.86549 12.0608 14 12 16 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span>Callback和图状态</span></a>
+    
+    
+    <a class="next" href="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/"><span>利用RAG技术创建智能客服机器人</span>
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M12.055 9C12.711 9.61644 14.3679 10.997 15.9519 11.7966C16.0174 11.8297 16.0154 11.9753 15.9494 12.0063C14.945 12.4779 13.0706 13.9264 12.055 15M15.5556 11.9667C13.1345 12.0608 8 12 6 11" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+    </a>
+    
+  </div>
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

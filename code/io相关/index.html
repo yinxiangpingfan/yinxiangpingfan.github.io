@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>golang-IO相关-(logrus,viper)</title>
+    <meta charset="utf-8">
+    <meta name="description" content="Ladder@在这里介绍了golang的IO相关，包括logrus,viper">
+    <meta name="author" content="印象简单/EasyImpr">
+    <link rel="canonical" href="https://yinxiangpingfan.github.io/code/io%E7%9B%B8%E5%85%B3/">
+
+    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+
+    
+
+
+    <meta property="og:url" content="https://yinxiangpingfan.github.io/code/io%E7%9B%B8%E5%85%B3/">
+  <meta property="og:site_name" content="印象简单的博客">
+  <meta property="og:title" content="golang-IO相关-(logrus,viper)">
+  <meta property="og:description" content="在这里介绍了golang的IO相关，包括logrus,viper">
+  <meta property="og:locale" content="zh">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="code">
+    <meta property="article:published_time" content="2026-03-30T18:57:42+08:00">
+    <meta property="article:modified_time" content="2026-03-30T18:57:42+08:00">
+    <meta property="article:tag" content="Golang">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="golang-IO相关-(logrus,viper)">
+  <meta name="twitter:description" content="在这里介绍了golang的IO相关，包括logrus,viper">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Codes",
+      "item": "https://yinxiangpingfan.github.io/code/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "golang-IO相关-(logrus,viper)",
+      "item": "https://yinxiangpingfan.github.io/code/io%E7%9B%B8%E5%85%B3/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "golang-IO相关-(logrus,viper)",
+  "name": "golang-IO相关-(logrus,viper)",
+  "description": "在这里介绍了golang的IO相关，包括logrus,viper\n",
+  "keywords": [
+    "golang"
+  ],
+  "articleBody": "在这里介绍了golang的IO相关，包括logrus,viper\ngolang-IO相关-(logrus,viper) logrus日志框架 首先要导入两个包\nimport ( \"fmt\" \"time\" rotatelogs \"github.com/lestrrat-go/file-rotatelogs\" //日志分割 \"github.com/sirupsen/logrus\" //logrus日志框架 ) 首先创建一个logger实例\nlogger := logrus.New() //创建一个logger实例 然后可以设置日志的等级，低于这个日志等级会忽略\nlogger.SetLevel(logrus.WarnLevel) 设置日志格式\n//普通日志格式 logger.SetFormatter(\u0026logrus.TextFormatter{ // ForceColors: true, //强制显示颜色（仅在某些终端能正常工作） DisableColors: true, //强制不显示颜色 TimestampFormat: \"2006-01-02 15:04:05.000\", // 显示ms }) //JSON日志格式 logger.SetFormatter(\u0026logrus.JSONFormatter{ TimestampFormat: \"2006-01-02 15:04:05.000\", // 显示ms }) 实现日志分割\nfout, err := rotatelogs.New( logFile+\".%Y%m%d%H\", //指定日志文件的路径和名称，路径不存在时会创建 rotatelogs.WithLinkName(logFile), //为最新的一份日志创建软链接 rotatelogs.WithRotationTime(1*time.Hour), //每隔1小时生成一份新的日志文件 rotatelogs.WithMaxAge(7*24*time.Hour), //只留最近7天的日志，或使用WithRotationCount只保留最近的几份日志 ) if err != nil { panic(err) } 可以是日志携带多余的key-value\nlogEntry := logger.WithFields(logrus.Fields{\"name\": \"dqq\", \"age\": 18}) //日志中携带一些额外的key-value 设置日志的输入文件\nlogger.SetOutput(fout) //设置日志文件 // logger.SetOutput(os.Stdout) //日志输出到终端 logger.SetReportCaller(true) //输出是从哪里调起的日志打印，日志里会包含func和file 设置日志中间件\nlogger.AddHook(\u0026AppHook{AppName: \"印象简单用于测试中间件的日志\"}) //在输出日志【之前】执行钩子 // 实现logrus.Hook接口 type AppHook struct { AppName string } // 适用于哪些Level func (h *AppHook) Levels() []logrus.Level { // return logrus.AllLevels return []logrus.Level{logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel} } // 在Fire函数时可读取或修改logrus.Entry func (h *AppHook) Fire(entry *logrus.Entry) error { entry.Data[\"app\"] = h.AppName //修改logrus.Entry fmt.Println(entry.Message+\"我是日志中间件\") //读取logrus.Entry。比如将 Error、Fatal 和 Panic 级别的错误日志发送到 logstash、kafka 等 return nil } 完整代码\npackage io import ( \"fmt\" \"time\" rotatelogs \"github.com/lestrrat-go/file-rotatelogs\" //日志分割 \"github.com/sirupsen/logrus\" //logrus日志框架 ) func InitLogrus(logLevel string, logFile string) *logrus.Logger { logger := logrus.New() //创建一个logger实例 //设置日志级别 switch logLevel { case \"debug\": logger.SetLevel(logrus.DebugLevel) case \"info\": logger.SetLevel(logrus.InfoLevel) case \"warn\": logger.SetLevel(logrus.WarnLevel) case \"error\": logger.SetLevel(logrus.ErrorLevel) case \"fatal\": logger.SetLevel(logrus.FatalLevel) case \"panic\": logger.SetLevel(logrus.PanicLevel) default: panic(fmt.Errorf(\"invalid log level %s\", logLevel)) } //设置日志格式 //普通文本格式 // logger.SetFormatter(\u0026logrus.TextFormatter{ // // ForceColors: true, //强制显示颜色（仅在某些终端能正常工作） // DisableColors: true, //强制不显示颜色 // TimestampFormat: \"2006-01-02 15:04:05.000\", // 显示ms // }) //json格式 logger.SetFormatter(\u0026logrus.JSONFormatter{ TimestampFormat: \"2006-01-02 15:04:05.000\", // 显示ms }) //实现日志分割 fout, err := rotatelogs.New( logFile+\".%Y%m%d%H\", //指定日志文件的路径和名称，路径不存在时会创建 rotatelogs.WithLinkName(logFile), //为最新的一份日志创建软链接 rotatelogs.WithRotationTime(1*time.Hour), //每隔1小时生成一份新的日志文件 rotatelogs.WithMaxAge(7*24*time.Hour), //只留最近7天的日志，或使用WithRotationCount只保留最近的几份日志 ) if err != nil { panic(err) } logger.SetOutput(fout) //设置日志文件 // logger.SetOutput(os.Stdout) //日志输出到终端 logger.SetReportCaller(true) //输出是从哪里调起的日志打印，日志里会包含func和file logger.AddHook(\u0026AppHook{AppName: \"印象简单用于测试中间件的日志\"}) //在输出日志【之前】执行钩子 return logger } // 实现logrus.Hook接口 type AppHook struct { AppName string } // 适用于哪些Level func (h *AppHook) Levels() []logrus.Level { // return logrus.AllLevels return []logrus.Level{logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel} } // 在Fire函数时可读取或修改logrus.Entry func (h *AppHook) Fire(entry *logrus.Entry) error { entry.Data[\"app\"] = h.AppName //修改logrus.Entry fmt.Println(entry.Message + \"我是日志中间件\") //读取logrus.Entry。比如将 Error、Fatal 和 Panic 级别的错误日志发送到 logstash、kafka 等 return nil } 测试代码\npackage io import ( \"testing\" ) func TestInitLogrus(t *testing.T) { logger := InitLogrus(\"info\", \"./logs/test.log\") logEntry := logger.WithFields(logrus.Fields{\"name\": \"hhh\", \"age\": 18}) //日志中携带一些额外的key-value logger.Debugf(\"这是调试日志%s\", \"1111\") logger.Infof(\"这是测试日志%s\", \"2222\") logEntry.Infof(\"这是测试日志%s\", \"2222\") logger.Error(\"这是错误日志\") defer func() { recover() }() logger.Panic(\"这是恐慌错误日志\") logger.Fatal(\"这是致命错误日志\") } viper解析配置文件 导入viper的包\nimport ( \"fmt\" \"path\" \"github.com/spf13/viper\" ) 初始化viper\nfunc InitViper(dir, file, FileType string) *viper.Viper { config := viper.New() config.AddConfigPath(dir) // 文件所在目录 config.SetConfigName(file) // 文件名(不带路径，不带后缀) config.SetConfigType(FileType) // 文件类型 if err := config.ReadInConfig(); err != nil { panic(fmt.Errorf(\"解析配置文件%s出错:%s\", path.Join(dir, file)+\".\"+FileType, err)) //系统初始化阶段发生任何错误，直接结束进程。logger还没初始化，不能用logger.Fatal() } return config } 使用配置文件的内容\n第一种方法（这里也展示了dbViper.WatchConfig()的用法：当配置文件变了重新识别配置文件）\n//读取配置的第一种方式 dbViper := InitViper(\"./conf\", \"mysql\", \"yaml\") dbViper.WatchConfig() //确保在调用WatchConfig()之前添加了所有的配置路径(AddConfigPath) if dbViper.IsSet(\"blog.age\") { //检查有没有此项配置 age := dbViper.GetInt(\"blog.age\") fmt.Println(\"age\", age) } else { fmt.Println(\"blog.age不存在\") } port := dbViper.GetInt(\"blog.port\") //该项不存在时会返回0值 fmt.Println(\"port\", port) time.Sleep(10 * time.Second) //10秒之内修改一下配置文件，看看viper能不能读取最新值 port = dbViper.GetInt(\"blog.port\") fmt.Println(\"port\", port) 第二种方法\n//读取配置的第二种方式 logViper := InitViper(\"./conf\", \"log\", \"yaml\") type LogConfig struct { Level string `mapstructure:\"level\"` //Tag File string `mapstructure:\"file\"` } var config LogConfig if err := logViper.Unmarshal(\u0026config); err != nil { fmt.Println(err) t.Fail() } else { fmt.Println(config.Level) fmt.Println(config.File) } ",
+  "wordCount" : "461",
+  "inLanguage": "zh",
+  "datePublished": "2026-03-30T18:57:42+08:00",
+  "dateModified": "2026-03-30T18:57:42+08:00",
+  "author":{
+    "@type": "Person",
+    "name": "印象简单/EasyImpr"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://yinxiangpingfan.github.io/code/io%E7%9B%B8%E5%85%B3/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "印象简单的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+    <link rel="icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg" sizes="16x16">
+
+<link rel="apple-touch-icon" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+
+<link rel="manifest" href="/images/%e5%be%ae%e4%bf%a1%e5%9b%be%e7%89%87_2025-11-23_104342_537.jpg">
+    
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+
+    
+    
+    <link rel="stylesheet" href="/css/main.min.ec28f09e946fc0df77c187fcd0d0ebde58fca6de8efb8e1620f3d45c32d4da88.css" integrity="sha256-7CjwnpRvwN93wYf80NDr3lj8pt6O&#43;44WIPPUXDLU2og=" crossorigin="anonymous" media="screen" />
+
+    
+    <link rel="stylesheet" href="/scss/highlight/github-dark.min.min.66034289ee9a113219a2c4aae0a8bd2095ab255c832a42efcf5863f10814e7a1.css" />
+
+    
+    <script src="/js/highlight.min.min.65a3017a8aabe1f9330e70527075c8d51bc9634d5cac35077af03588c1df8078.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script>
+    
+    <link rel="stylesheet" href="/css/custom.css" />
+</head>
+<body>
+      <main class="wrapper"><nav class="navigation">
+    <section class="container">
+        <a class="navigation-brand" href="/">
+            主页
+        </a>
+        <input type="checkbox" id="menu-toggle" />
+        <label class="menu-button float-right" for="menu-toggle">
+            <span></span><span></span><span></span>
+        </label>
+        
+        <ul class="navigation-list" id="navigation-list">
+            
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/code/">开发</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/agent/">Agent</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/life/">生活</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/friend/">友情链接</a>
+            </li>
+            
+            <li class="navigation-item navigation-menu">
+                <a class="navigation-link" href="/guestbook/">留言板</a>
+            </li>
+            
+            
+
+            <li class="navigation-item menu-separator">
+                <span>|</span>
+            </li>
+
+            
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="https://github.com/yinxiangpingfan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>
+            </li>
+            
+            <li class="navigation-item navigation-social">
+                <a class="navigation-link" href="mailto:ecygbsj@163.com"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></a>
+            </li>
+            
+            
+
+            <li class="navigation-item navigation-dark">
+                <button id="mode" type="button" aria-label="toggle user light or dark theme">
+                    <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+                    <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+                </button>
+            </li>
+
+            
+            
+        </ul>
+        
+    </section>
+</nav>
+<div id="content">
+<article class="blog-single">
+  <header class="blog-title">
+    <h1>golang-IO相关-(logrus,viper)</h1>
+  </header>
+
+  <p>
+  <small>
+    2026年3月30日&nbsp;· 461 字&nbsp;· 3 分钟</small>
+
+  
+<p>
+
+  <aside class="custom-side-toc">
+    <div class="toc-title">文章目录</div>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#logrus日志框架">logrus日志框架</a></li>
+    <li><a href="#viper解析配置文件">viper解析配置文件</a></li>
+  </ul>
+</nav>
+  </aside>
+
+  <section class="blog-content"><p>在这里介绍了golang的IO相关，包括logrus,viper</p>
+<h1 id="golang-io相关-logrusviper">golang-IO相关-(logrus,viper)</h1>
+<h2 id="logrus日志框架">logrus日志框架</h2>
+<p>首先要导入两个包</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;time&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">rotatelogs</span> <span style="color:#e6db74">&#34;github.com/lestrrat-go/file-rotatelogs&#34;</span> <span style="color:#75715e">//日志分割</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;github.com/sirupsen/logrus&#34;</span>                        <span style="color:#75715e">//logrus日志框架</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>首先创建一个logger实例</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#a6e22e">logger</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">New</span>() <span style="color:#75715e">//创建一个logger实例</span>
+</span></span></code></pre></div><p>然后可以设置日志的等级，低于这个日志等级会忽略</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">WarnLevel</span>)
+</span></span></code></pre></div><p>设置日志格式</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#75715e">//普通日志格式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetFormatter</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">TextFormatter</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ForceColors: true,  //强制显示颜色（仅在某些终端能正常工作）</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">DisableColors</span>:   <span style="color:#66d9ef">true</span>,                      <span style="color:#75715e">//强制不显示颜色</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">TimestampFormat</span>: <span style="color:#e6db74">&#34;2006-01-02 15:04:05.000&#34;</span>, <span style="color:#75715e">// 显示ms</span>
+</span></span><span style="display:flex;"><span>    })
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#75715e">//JSON日志格式</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetFormatter</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">JSONFormatter</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">TimestampFormat</span>: <span style="color:#e6db74">&#34;2006-01-02 15:04:05.000&#34;</span>, <span style="color:#75715e">// 显示ms</span>
+</span></span><span style="display:flex;"><span>    })
+</span></span></code></pre></div><p>实现日志分割</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#a6e22e">fout</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">New</span>(
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logFile</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;.%Y%m%d%H&#34;</span>,                      <span style="color:#75715e">//指定日志文件的路径和名称，路径不存在时会创建</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithLinkName</span>(<span style="color:#a6e22e">logFile</span>),         <span style="color:#75715e">//为最新的一份日志创建软链接</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithRotationTime</span>(<span style="color:#ae81ff">1</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>), <span style="color:#75715e">//每隔1小时生成一份新的日志文件</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithMaxAge</span>(<span style="color:#ae81ff">7</span><span style="color:#f92672">*</span><span style="color:#ae81ff">24</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>),    <span style="color:#75715e">//只留最近7天的日志，或使用WithRotationCount只保留最近的几份日志</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>可以是日志携带多余的key-value</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#a6e22e">logEntry</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">WithFields</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Fields</span>{<span style="color:#e6db74">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;dqq&#34;</span>, <span style="color:#e6db74">&#34;age&#34;</span>: <span style="color:#ae81ff">18</span>}) <span style="color:#75715e">//日志中携带一些额外的key-value</span>
+</span></span></code></pre></div><p>设置日志的输入文件</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetOutput</span>(<span style="color:#a6e22e">fout</span>) <span style="color:#75715e">//设置日志文件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// logger.SetOutput(os.Stdout)  //日志输出到终端</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetReportCaller</span>(<span style="color:#66d9ef">true</span>) <span style="color:#75715e">//输出是从哪里调起的日志打印，日志里会包含func和file</span>
+</span></span></code></pre></div><p>设置日志中间件</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">AddHook</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">AppHook</span>{<span style="color:#a6e22e">AppName</span>: <span style="color:#e6db74">&#34;印象简单用于测试中间件的日志&#34;</span>}) <span style="color:#75715e">//在输出日志【之前】执行钩子</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#75715e">// 实现logrus.Hook接口</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">AppHook</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">AppName</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 适用于哪些Level</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">h</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AppHook</span>) <span style="color:#a6e22e">Levels</span>() []<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Level</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// return logrus.AllLevels</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> []<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Level</span>{<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">ErrorLevel</span>, <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">FatalLevel</span>, <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">PanicLevel</span>}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 在Fire函数时可读取或修改logrus.Entry</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">h</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AppHook</span>) <span style="color:#a6e22e">Fire</span>(<span style="color:#a6e22e">entry</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Entry</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">Data</span>[<span style="color:#e6db74">&#34;app&#34;</span>] = <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">AppName</span> <span style="color:#75715e">//修改logrus.Entry</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">Message</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;我是日志中间件&#34;</span>)    <span style="color:#75715e">//读取logrus.Entry。比如将 Error、Fatal 和 Panic 级别的错误日志发送到 logstash、kafka 等</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>完整代码</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">io</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;time&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">rotatelogs</span> <span style="color:#e6db74">&#34;github.com/lestrrat-go/file-rotatelogs&#34;</span> <span style="color:#75715e">//日志分割</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;github.com/sirupsen/logrus&#34;</span>                        <span style="color:#75715e">//logrus日志框架</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">InitLogrus</span>(<span style="color:#a6e22e">logLevel</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">logFile</span> <span style="color:#66d9ef">string</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Logger</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">New</span>() <span style="color:#75715e">//创建一个logger实例</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//设置日志级别</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">logLevel</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;debug&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">DebugLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;info&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">InfoLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;warn&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">WarnLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;error&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">ErrorLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;fatal&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">FatalLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;panic&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetLevel</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">PanicLevel</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>        panic(<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;invalid log level %s&#34;</span>, <span style="color:#a6e22e">logLevel</span>))
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//设置日志格式</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//普通文本格式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// logger.SetFormatter(&amp;logrus.TextFormatter{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//     // ForceColors: true,  //强制显示颜色（仅在某些终端能正常工作）</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//     DisableColors:   true,                      //强制不显示颜色</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//     TimestampFormat: &#34;2006-01-02 15:04:05.000&#34;, // 显示ms</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// })</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//json格式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetFormatter</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">JSONFormatter</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">TimestampFormat</span>: <span style="color:#e6db74">&#34;2006-01-02 15:04:05.000&#34;</span>, <span style="color:#75715e">// 显示ms</span>
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//实现日志分割</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fout</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">New</span>(
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logFile</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;.%Y%m%d%H&#34;</span>,                      <span style="color:#75715e">//指定日志文件的路径和名称，路径不存在时会创建</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithLinkName</span>(<span style="color:#a6e22e">logFile</span>),         <span style="color:#75715e">//为最新的一份日志创建软链接</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithRotationTime</span>(<span style="color:#ae81ff">1</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>), <span style="color:#75715e">//每隔1小时生成一份新的日志文件</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rotatelogs</span>.<span style="color:#a6e22e">WithMaxAge</span>(<span style="color:#ae81ff">7</span><span style="color:#f92672">*</span><span style="color:#ae81ff">24</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>),    <span style="color:#75715e">//只留最近7天的日志，或使用WithRotationCount只保留最近的几份日志</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetOutput</span>(<span style="color:#a6e22e">fout</span>) <span style="color:#75715e">//设置日志文件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// logger.SetOutput(os.Stdout)  //日志输出到终端</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">SetReportCaller</span>(<span style="color:#66d9ef">true</span>) <span style="color:#75715e">//输出是从哪里调起的日志打印，日志里会包含func和file</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">AddHook</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">AppHook</span>{<span style="color:#a6e22e">AppName</span>: <span style="color:#e6db74">&#34;印象简单用于测试中间件的日志&#34;</span>}) <span style="color:#75715e">//在输出日志【之前】执行钩子</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">logger</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 实现logrus.Hook接口</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">AppHook</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">AppName</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 适用于哪些Level</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">h</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AppHook</span>) <span style="color:#a6e22e">Levels</span>() []<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Level</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// return logrus.AllLevels</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> []<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Level</span>{<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">ErrorLevel</span>, <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">FatalLevel</span>, <span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">PanicLevel</span>}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 在Fire函数时可读取或修改logrus.Entry</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">h</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AppHook</span>) <span style="color:#a6e22e">Fire</span>(<span style="color:#a6e22e">entry</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Entry</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">Data</span>[<span style="color:#e6db74">&#34;app&#34;</span>] = <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">AppName</span>          <span style="color:#75715e">//修改logrus.Entry</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">Message</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;我是日志中间件&#34;</span>) <span style="color:#75715e">//读取logrus.Entry。比如将 Error、Fatal 和 Panic 级别的错误日志发送到 logstash、kafka 等</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>测试代码</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">io</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;testing&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestInitLogrus</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">InitLogrus</span>(<span style="color:#e6db74">&#34;info&#34;</span>, <span style="color:#e6db74">&#34;./logs/test.log&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logEntry</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">WithFields</span>(<span style="color:#a6e22e">logrus</span>.<span style="color:#a6e22e">Fields</span>{<span style="color:#e6db74">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;hhh&#34;</span>, <span style="color:#e6db74">&#34;age&#34;</span>: <span style="color:#ae81ff">18</span>}) <span style="color:#75715e">//日志中携带一些额外的key-value</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;这是调试日志%s&#34;</span>, <span style="color:#e6db74">&#34;1111&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;这是测试日志%s&#34;</span>, <span style="color:#e6db74">&#34;2222&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logEntry</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;这是测试日志%s&#34;</span>, <span style="color:#e6db74">&#34;2222&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;这是错误日志&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>        recover()
+</span></span><span style="display:flex;"><span>    }()
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Panic</span>(<span style="color:#e6db74">&#34;这是恐慌错误日志&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;这是致命错误日志&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="viper解析配置文件">viper解析配置文件</h2>
+<p>导入viper的包</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;path&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;github.com/spf13/viper&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>初始化viper</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">InitViper</span>(<span style="color:#a6e22e">dir</span>, <span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">FileType</span> <span style="color:#66d9ef">string</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">viper</span>.<span style="color:#a6e22e">Viper</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">config</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">viper</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">AddConfigPath</span>(<span style="color:#a6e22e">dir</span>)      <span style="color:#75715e">// 文件所在目录</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">SetConfigName</span>(<span style="color:#a6e22e">file</span>)     <span style="color:#75715e">// 文件名(不带路径，不带后缀)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">SetConfigType</span>(<span style="color:#a6e22e">FileType</span>) <span style="color:#75715e">// 文件类型</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">ReadInConfig</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        panic(<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;解析配置文件%s出错:%s&#34;</span>, <span style="color:#a6e22e">path</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">dir</span>, <span style="color:#a6e22e">file</span>)<span style="color:#f92672">+</span><span style="color:#e6db74">&#34;.&#34;</span><span style="color:#f92672">+</span><span style="color:#a6e22e">FileType</span>, <span style="color:#a6e22e">err</span>)) <span style="color:#75715e">//系统初始化阶段发生任何错误，直接结束进程。logger还没初始化，不能用logger.Fatal()</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">config</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>使用配置文件的内容</p>
+<p>第一种方法（这里也展示了dbViper.WatchConfig()的用法：当配置文件变了重新识别配置文件）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">//读取配置的第一种方式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">dbViper</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">InitViper</span>(<span style="color:#e6db74">&#34;./conf&#34;</span>, <span style="color:#e6db74">&#34;mysql&#34;</span>, <span style="color:#e6db74">&#34;yaml&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">dbViper</span>.<span style="color:#a6e22e">WatchConfig</span>()          <span style="color:#75715e">//确保在调用WatchConfig()之前添加了所有的配置路径(AddConfigPath)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">dbViper</span>.<span style="color:#a6e22e">IsSet</span>(<span style="color:#e6db74">&#34;blog.age&#34;</span>) { <span style="color:#75715e">//检查有没有此项配置</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">age</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">dbViper</span>.<span style="color:#a6e22e">GetInt</span>(<span style="color:#e6db74">&#34;blog.age&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;age&#34;</span>, <span style="color:#a6e22e">age</span>)
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;blog.age不存在&#34;</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">port</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">dbViper</span>.<span style="color:#a6e22e">GetInt</span>(<span style="color:#e6db74">&#34;blog.port&#34;</span>) <span style="color:#75715e">//该项不存在时会返回0值</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;port&#34;</span>, <span style="color:#a6e22e">port</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>) <span style="color:#75715e">//10秒之内修改一下配置文件，看看viper能不能读取最新值</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">port</span> = <span style="color:#a6e22e">dbViper</span>.<span style="color:#a6e22e">GetInt</span>(<span style="color:#e6db74">&#34;blog.port&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;port&#34;</span>, <span style="color:#a6e22e">port</span>)
+</span></span></code></pre></div><p>第二种方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span>    <span style="color:#75715e">//读取配置的第二种方式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logViper</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">InitViper</span>(<span style="color:#e6db74">&#34;./conf&#34;</span>, <span style="color:#e6db74">&#34;log&#34;</span>, <span style="color:#e6db74">&#34;yaml&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">type</span> <span style="color:#a6e22e">LogConfig</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Level</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`mapstructure:&#34;level&#34;`</span> <span style="color:#75715e">//Tag</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">File</span>  <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`mapstructure:&#34;file&#34;`</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">config</span> <span style="color:#a6e22e">LogConfig</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logViper</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">config</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Fail</span>()
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Level</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">File</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div></section>
+
+  
+  
+
+  
+
+<div class="related-resources">
+  
+    
+    
+    
+  
+</div>
+
+
+  
+  
+<div class="comments">
+  <script>
+      const getTheme = window.localStorage && window.localStorage.getItem("theme");
+      let theme = getTheme === 'dark' ? 'dark' : 'light';
+      let s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', 'yinxiangpingfan\/yinxiangpingfan.github.io');
+      s.setAttribute('data-repo-id', 'R_kgDOQ3n2PQ');
+      s.setAttribute('data-category', 'Announcements');
+      s.setAttribute('data-category-id', 'DIC_kwDOQ3n2Pc4C0-Rs');
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-strict', '0');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'top');
+      s.setAttribute('data-theme', theme);
+      s.setAttribute('data-lang', 'zh-CN');
+      s.setAttribute('data-loading', 'lazy');
+      s.setAttribute('crossorigin', 'anonymous');
+      s.setAttribute('async', '');
+      document.querySelector('div.comments').innerHTML = '';
+      document.querySelector('div.comments').appendChild(s);
+  </script>
+</div>
+
+</article>
+
+        </div><footer class="footer">
+  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+    Powered by
+    <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
+    <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
+️  </p>
+</footer>
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.5376 22.7916C11.0152 22.7207 22.5795 21.1781 22.0978 10.4211C22.0536 9.43274 21.9303 8.53367 21.7387 7.71865M10.5376 22.7916C16.876 22.3728 20.0969 19.8899 21.5383 16.9142M10.5376 22.7916C9.7707 22.9055 8.97982 22.8964 8.19743 22.7725M21.7387 7.71865C21.4988 6.69828 21.1518 5.80967 20.7188 5.04257M21.7387 7.71865C22.6022 10.1105 23.0542 13.7848 21.5383 16.9142M20.7188 5.04257C17.1684 -1.24629 7.83127 0.632493 4.27577 5.04257C2.88063 6.77451 -0.0433281 11.1668 1.38159 16.6571C2.27481 20.0988 5.17269 22.2936 8.19743 22.7725M20.7188 5.04257C22.0697 6.9404 24.0299 11.3848 22.3541 15.4153M21.5383 16.9142C21.8737 16.4251 22.1428 15.9235 22.3541 15.4153M8.19743 22.7725C12.1971 23.4683 20.6281 22.971 22.3541 15.4153M14 10.945C13.3836 10.289 12.003 8.63215 11.2034 7.04814C11.1703 6.98257 11.0247 6.98456 10.9937 7.05061C10.5221 8.05496 9.07362 9.92941 8 10.945M11.0333 7.44444C10.9392 9.86549 11 15 12 17" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+</a>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+</script>
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'Copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'Copied';
+            setTimeout(() => {
+                copybutton.innerHTML = 'Copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+        codeblock.parentNode.appendChild(copybutton);
+    });
+</script></main>
+    </body><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+      const images = Array.from(document.querySelectorAll(".blog-content img"));
+      images.forEach(img => {
+          mediumZoom(img, {
+              margin: 10,  
+              scrollOffset: 40,  
+              container: null,  
+              template: null,  
+              background: 'rgba(0, 0, 0, 0.5)'
+          });
+      });
+  </script>
+
+  
+  <script src="/main.min.6bb26b69159420159c74dc9e097b06a578ed2b68c701466a91a44a9632d851bd0af167a1b30012387b4c512b48ad9ad4d3394e04d77ae38d57e1920fe4ed34fe.js" integrity="sha512-a7JraRWUIBWcdNyeCXsGpXjtK2jHAUZqkaRKljLYUb0K8WehswASOHtMUStIrZrU0zlOBNd6441X4ZIP5O00/g==" crossorigin="anonymous" defer></script></html>

@@ -1,0 +1,66 @@
+/* 自定义目录样式 - PC端悬浮在右侧，手机端正常显示 */
+
+/* PC端宽屏时，目录悬浮在右侧 */
+@media (min-width: 1280px) {
+  .custom-side-toc {
+    position: sticky;
+    top: 80px; /* 距离顶部的距离 */
+    float: right;
+    width: 260px;
+    /* 通过负外边距将目录推到正文主体的右侧空白处 */
+    margin-right: -300px;
+    padding: 10px 15px;
+    border-left: 1px solid #eee;
+    background-color: #fff;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    z-index: 10;
+  }
+
+  .custom-side-toc .toc-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+  }
+
+  /* 暗色模式适配 */
+  [data-dark-mode] .custom-side-toc {
+    background-color: #1a1a1a;
+    border-left-color: #333;
+  }
+
+  [data-dark-mode] .custom-side-toc .toc-title {
+    border-bottom-color: #333;
+  }
+}
+
+/* 移动端或小屏幕下保持原有流式布局，不悬浮 */
+@media (max-width: 1279px) {
+  .custom-side-toc {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+
+  .custom-side-toc .toc-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  /* 暗色模式适配 */
+  [data-dark-mode] .custom-side-toc {
+    background-color: #2a2a2a;
+    border-color: #333;
+  }
+
+  [data-dark-mode] .custom-side-toc .toc-title {
+    border-bottom-color: #444;
+  }
+}
