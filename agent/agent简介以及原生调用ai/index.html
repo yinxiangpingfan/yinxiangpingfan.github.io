@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh"><head>
+<html lang="zh"><head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent简介以及原生调用ai</title>
     <meta charset="utf-8">
     <meta name="description" content="Ladder@agent是什么，以及go通过http调用ai">
     <meta name="author" content="印象简单/EasyImpr">
-    <link rel="canonical" href="https://yinxiangpingfan.github.io/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+    <link rel="canonical" href="https://www.easyimpr.com:1313/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
 
-    <link rel="alternate" type="application/rss+xml" href="https://yinxiangpingfan.github.io//index.xml" title="印象简单的博客">
+    <link rel="alternate" type="application/rss+xml" href="https://www.easyimpr.com:1313//index.xml" title="印象简单的博客">
 
     
 
 
-    <meta property="og:url" content="https://yinxiangpingfan.github.io/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
+    <meta property="og:url" content="https://www.easyimpr.com:1313/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/">
   <meta property="og:site_name" content="印象简单的博客">
   <meta property="og:title" content="Agent简介以及原生调用ai">
   <meta property="og:description" content="agent是什么，以及go通过http调用ai">
@@ -23,13 +23,13 @@
     <meta property="article:modified_time" content="2026-01-11T20:06:45+08:00">
     <meta property="article:tag" content="Agent">
     <meta property="article:tag" content="Golang">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
-      <meta property="og:see_also" content="https://yinxiangpingfan.github.io/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0reactagent/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0chainagent/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/callback%E5%92%8C%E5%9B%BE%E7%8A%B6%E6%80%81/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E5%9B%BE%E7%9A%84%E6%9E%84%E5%BB%BA/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E5%88%A9%E7%94%A8rag%E6%8A%80%E6%9C%AF%E5%88%9B%E5%BB%BA%E6%99%BA%E8%83%BD%E5%AE%A2%E6%9C%8D%E6%9C%BA%E5%99%A8%E4%BA%BA/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E5%9F%BA%E4%BA%8E%E5%90%91%E9%87%8F%E7%9A%84%E8%AF%AD%E4%B9%89%E7%9B%B8%E4%BC%BC%E6%A3%80%E7%B4%A2/">
+      <meta property="og:see_also" content="https://www.easyimpr.com:1313/agent/%E6%96%87%E6%A1%A3%E7%9A%84%E5%8A%A0%E8%BD%BD%E5%92%8C%E8%BD%AC%E6%8D%A2/">
 
 
   <meta name="twitter:card" content="summary">
@@ -46,13 +46,13 @@
       "@type": "ListItem",
       "position":  1 ,
       "name": "Agents",
-      "item": "https://yinxiangpingfan.github.io/agent/"
+      "item": "https://www.easyimpr.com:1313/agent/"
     }, 
     {
       "@type": "ListItem",
       "position":  2 ,
       "name": "Agent简介以及原生调用ai",
-      "item": "https://yinxiangpingfan.github.io/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+      "item": "https://www.easyimpr.com:1313/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
     }
   ]
 }
@@ -67,7 +67,7 @@
   "keywords": [
     "agent", "golang"
   ],
-  "articleBody": "agent是什么，以及go通过http调用ai\n什么是AI Agent AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。\n原生方法调用大模型 这里讲一个调用deepseek大模型的方法，先看官方文档\n从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式\n非流式调用 现在写一个golang的调用示例，使用http包\nconst ( DeepseekURL = \"https://api.deepseek.com/chat/completions\" ) type Message struct { Role string `json:\"role\"` Content string `json:\"content\"` } type Request struct { Model string `json:\"model\"` Messages []*Message `json:\"messages\"` Stream bool `json:\"stream\"` } func ChatWithDeepseek(rb *Request) { //先json序列化 bs, err := sonic.Marshal(rb) if err != nil { fmt.Println(\"json序列化失败\", err) return } //构造http请求体 request, _ := http.NewRequest(http.MethodPost, DeepseekURL, bytes.NewReader(bs)) //添加请求头 request.Header.Add(\"Content-Type\", \"application/json\") request.Header.Add(\"Authorization\", \"Bearer sk-xxxx\") //发送请求 client := http.Client{ Timeout: 10 * time.Second, //设置超时时间 } response, err := client.Do(request) if err != nil { fmt.Println(\"发送请求失败\", err) return } defer response.Body.Close() //读取响应体 if response.StatusCode != 200 { body, _ := io.ReadAll(response.Body) fmt.Println(\"请求失败\", string(body), response.StatusCode) return } body, _ := io.ReadAll(response.Body) fmt.Println(string(body)) } func main() { rb := \u0026Request{ Model: \"deepseek-chat\", Messages: []*Message{ {Role: \"system\", Content: \"你是一个AI助手，请回答用户的问题\"}, {Role: \"user\", Content: \"离新年还有几天？\"}, }, Stream: false, } ChatWithDeepseek(rb) } 查看回答\n\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。 \\n\\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。 \\n\\n需要我帮你计算其他日子的倒计时吗？ 😊\"}, 由此可见，大模型并不知道现在是几号。\n不是特别美观进行json的反序列化。\ntype Choices struct { Index int `json:\"index\"` Message *Message `json:\"message\"` } type ResponseBody struct { Choices []*Choices `json:\"choices\"` } //===================== //fmt.Println(string(body)) var respBody ResponseBody err = sonic.Unmarshal(body, \u0026respBody) if err != nil { fmt.Println(\"json反序列化失败\", err) return } fmt.Println(respBody.Choices[0].Message.Role, respBody.Choices[0].Message.Content) 流式调用 很简单，现在main函数把stream改为true\n然后打印流失输出\n//打印流失返回结果 buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } fmt.Print(string(buffer[:n])) } data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"迎接\"},\"logprobs\":null,\"finish_reason\":null}]} data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"新的一年\"},\"logprobs\":null,\"finish_reason\":null}]} 现在可以根据流式的输出格式进行反序列化\ntype Delta struct { Content string `json:\"content\"` } type StreamChoice struct { Index int `json:\"index\"` Delta *Delta `json:\"delta\"` Logprobs string `json:\"logprobs\"` FinishReason string `json:\"finish_reason\"` } type ResStreamBody struct { ID string `json:\"id\"` Object string `json:\"object\"` Created int64 `json:\"created\"` Model string `json:\"model\"` SystemFingerprint string `json:\"system_fingerprint\"` Choices []*StreamChoice `json:\"choices\"` } //============================================ buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } // fmt.Print(string(buffer[:n])) //根据data分割，删掉data: 然后进行反序列化 for _, segment := range bytes.Split(buffer[:n], []byte(\"data: \")) { //删除空白行和换行 segment = bytes.TrimSpace(segment) if len(segment) == 0 { continue } //反序列化 var respStreamBody ResStreamBody err = sonic.Unmarshal(segment, \u0026respStreamBody) if err != nil { if string(segment) == \"[DONE]\" { continue } fmt.Println(\"json反序列化失败\", err) return } fmt.Printf(\"%s\", respStreamBody.Choices[0].Delta.Content) } } 效果如下\n今天是 **2024 年 12 月 31 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。 - **农历新年（春节）**：2025 年 1 月 29 日（星期三） - **倒计时**：从今天（12 月 31 日）算起，还有 **29 天**。 如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 1 日）** 就是新年啦！🎉 希望这些信息对你有帮助！ 😊 ",
+  "articleBody": "agent是什么，以及go通过http调用ai\n什么是AI Agent AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。\n原生方法调用大模型 这里讲一个调用deepseek大模型的方法，先看官方文档\n从官方文档可以看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式\n非流式调用 现在写一个golang的调用示例，使用http包\nconst ( DeepseekURL = \"https://api.deepseek.com/chat/completions\" ) type Message struct { Role string `json:\"role\"` Content string `json:\"content\"` } type Request struct { Model string `json:\"model\"` Messages []*Message `json:\"messages\"` Stream bool `json:\"stream\"` } func ChatWithDeepseek(rb *Request) { //先json序列化 bs, err := sonic.Marshal(rb) if err != nil { fmt.Println(\"json序列化失败\", err) return } //构造http请求体 request, _ := http.NewRequest(http.MethodPost, DeepseekURL, bytes.NewReader(bs)) //添加请求头 request.Header.Add(\"Content-Type\", \"application/json\") request.Header.Add(\"Authorization\", \"Bearer sk-xxxx\") //发送请求 client := http.Client{ Timeout: 10 * time.Second, //设置超时时间 } response, err := client.Do(request) if err != nil { fmt.Println(\"发送请求失败\", err) return } defer response.Body.Close() //读取响应体 if response.StatusCode != 200 { body, _ := io.ReadAll(response.Body) fmt.Println(\"请求失败\", string(body), response.StatusCode) return } body, _ := io.ReadAll(response.Body) fmt.Println(string(body)) } func main() { rb := \u0026Request{ Model: \"deepseek-chat\", Messages: []*Message{ {Role: \"system\", Content: \"你是一个AI助手，请回答用户的问题\"}, {Role: \"user\", Content: \"离新年还有几天？\"}, }, Stream: false, } ChatWithDeepseek(rb) } 查看回答\n\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"今天是 **2025 年 1 月 1 日**，所以 **离 2026 年新年（元旦）还有 365 天**。 \\n\\n不过如果你指的是 **农历新年（春节）**，2026 年的春节是 **2 月 17 日**，那么从今天算起还有 **412 天**。 \\n\\n需要我帮你计算其他日子的倒计时吗？ 😊\"}, 由此可见，大模型并不知道现在是几号。\n不是特别美观进行json的反序列化。\ntype Choices struct { Index int `json:\"index\"` Message *Message `json:\"message\"` } type ResponseBody struct { Choices []*Choices `json:\"choices\"` } //===================== //fmt.Println(string(body)) var respBody ResponseBody err = sonic.Unmarshal(body, \u0026respBody) if err != nil { fmt.Println(\"json反序列化失败\", err) return } fmt.Println(respBody.Choices[0].Message.Role, respBody.Choices[0].Message.Content) 流式调用 很简单，现在main函数把stream改为true\n然后打印流失输出\n//打印流失返回结果 buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } fmt.Print(string(buffer[:n])) } data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"迎接\"},\"logprobs\":null,\"finish_reason\":null}]} data: {\"id\":\"5b196ab2-4104-4052-bea3-d208853e869d\",\"object\":\"chat.completion.chunk\",\"created\":1768130035,\"model\":\"deepseek-chat\",\"system_fingerprint\":\"fp_eaab8d114b_prod0820_fp8_kvcache\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"新的一年\"},\"logprobs\":null,\"finish_reason\":null}]} 现在可以根据流式的输出格式进行反序列化\ntype Delta struct { Content string `json:\"content\"` } type StreamChoice struct { Index int `json:\"index\"` Delta *Delta `json:\"delta\"` Logprobs string `json:\"logprobs\"` FinishReason string `json:\"finish_reason\"` } type ResStreamBody struct { ID string `json:\"id\"` Object string `json:\"object\"` Created int64 `json:\"created\"` Model string `json:\"model\"` SystemFingerprint string `json:\"system_fingerprint\"` Choices []*StreamChoice `json:\"choices\"` } //============================================ buffer := make([]byte, 2048) for { n, err := response.Body.Read(buffer) if err != nil { if err == io.EOF { break } fmt.Println(\"读取响应体失败\", err) return } // fmt.Print(string(buffer[:n])) //根据data分割，删掉data: 然后进行反序列化 for _, segment := range bytes.Split(buffer[:n], []byte(\"data: \")) { //删除空白行和换行 segment = bytes.TrimSpace(segment) if len(segment) == 0 { continue } //反序列化 var respStreamBody ResStreamBody err = sonic.Unmarshal(segment, \u0026respStreamBody) if err != nil { if string(segment) == \"[DONE]\" { continue } fmt.Println(\"json反序列化失败\", err) return } fmt.Printf(\"%s\", respStreamBody.Choices[0].Delta.Content) } } 效果如下\n今天是 **2024 年 12 月 31 日**，距离 **2025 年农历新年（春节）** 还有 **29 天**。 - **农历新年（春节）**：2025 年 1 月 29 日（星期三） - **倒计时**：从今天（12 月 31 日）算起，还有 **29 天**。 如果你指的是 **公历新年（元旦）**，那么 **明天（1 月 1 日）** 就是新年啦！🎉 希望这些信息对你有帮助！ 😊 ",
   "wordCount" : "408",
   "inLanguage": "zh",
   "datePublished": "2026-01-11T20:06:45+08:00",
@@ -78,14 +78,14 @@
   },
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "https://yinxiangpingfan.github.io/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
+    "@id": "https://www.easyimpr.com:1313/agent/agent%E7%AE%80%E4%BB%8B%E4%BB%A5%E5%8F%8A%E5%8E%9F%E7%94%9F%E8%B0%83%E7%94%A8ai/"
   },
   "publisher": {
     "@type": "Organization",
     "name": "印象简单的博客",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://yinxiangpingfan.github.io/favicon.ico"
+      "url": "https://www.easyimpr.com:1313/favicon.ico"
     }
   }
 }
@@ -207,9 +207,7 @@
 <p>AI Agent 开发现在指的是大模型应用开发。可以理解为AI+工具的调用，举个简单的例子，假如一个AI大模型是去年训练好的，如果你问他今年发生的事情，他肯定是不知道的，这时候AI就可以调用联网的工具来获取知识。这就是相当于给AI装上了翅膀。</p>
 <h1 id="原生方法调用大模型">原生方法调用大模型</h1>
 <p>这里讲一个调用deepseek大模型的方法，先看官方文档</p>
-<p><img src="./agent01/image.png" alt="" data-zoomable>
-</p>
-<p>从这里看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式</p>
+<p>从官方文档可以看到，调用需要发送一个post请求,system是设定大模型，user是用户，stream是判断是否流式</p>
 <h2 id="非流式调用">非流式调用</h2>
 <p>现在写一个golang的调用示例，使用http包</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
@@ -377,7 +375,7 @@
   
   <div class="paginator">
     
-    <a class="prev" href="https://yinxiangpingfan.github.io/agent/eino%E8%B0%83%E7%94%A8%E5%A4%A7%E6%A8%A1%E5%9E%8B/">
+    <a class="prev" href="https://www.easyimpr.com:1313/agent/eino%E8%B0%83%E7%94%A8%E5%A4%A7%E6%A8%A1%E5%9E%8B/">
       <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M3.77086 21.1546C11.0491 22.698 21.4339 21.7773 21.4339 16.3608V4.63375C21.4339 3.93962 21.3581 3.30535 21.1917 2.76787M3.77086 21.1546C1.9934 20.7777 0.973585 18.7264 1.08749 16.688C1.2668 13.479 1.15721 9.43135 1.00513 6.21507C0.87809 3.52811 3.12891 1.16316 5.51029 1.25008C9.76594 1.40542 15.377 1.20229 18.7912 1.00542C20.0864 0.930734 20.8406 1.63385 21.1917 2.76787M3.77086 21.1546C4.56586 21.4723 5.49168 21.7879 6.5 22.0658M21.1917 2.76787C23.1097 4.18217 23.13 12.4191 22.9004 16.3608C20.8478 24.0194 12.3061 23.6662 6.5 22.0658M21.1917 2.76787C21.7612 4.51192 22.7203 9.67216 22 16.3608C21.2797 23.0494 11.3665 22.9511 6.5 22.0658M9.94496 9C9.28897 9.61644 7.63215 10.997 6.04814 11.7966C5.98257 11.8297 5.98456 11.9753 6.05061 12.0063C7.05496 12.4779 8.92941 13.9264 9.94496 15M6.44444 11.9667C8.86549 12.0608 14 12 16 11" stroke="currentColor" stroke-linecap="round"/>
       </svg>
@@ -428,7 +426,7 @@
 </article>
 
         </div><footer class="footer">
-  <p>&copy; 2026 <a href="https://yinxiangpingfan.github.io/">印象简单的博客</a>
+  <p>&copy; 2026 <a href="https://www.easyimpr.com:1313/">印象简单的博客</a>
     Powered by
     <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>
     <a href="https://github.com/guangzhengli/hugo-theme-ladder" rel="noopener" target="_blank">Ladder</a>
